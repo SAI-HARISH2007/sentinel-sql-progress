@@ -1,0 +1,26 @@
+# Local MySQL 8 for the Sentinel project. Start it once:   docker compose up -d
+# (Dev-only passwords. Nothing here is a secret; do not reuse them anywhere real.)
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sentinel-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: sentinel_root_2026
+    ports:
+      - "3306:3306"
+    volumes:
+      - sentinel_data:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --event-scheduler=ON
+      --log-bin-trust-function-creators=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psentinel_root_2026"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sentinel_data:

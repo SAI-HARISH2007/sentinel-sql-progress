@@ -1,0 +1,276 @@
+COLUMN	account_devices	1	account_id	int	NO	<NULL>		
+COLUMN	account_devices	2	device_id	int	NO	<NULL>		
+COLUMN	account_devices	3	first_seen	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	account_devices	4	last_seen	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED on update CURRENT_TIMESTAMP	
+COLUMN	accounts	1	account_id	int	NO	<NULL>	auto_increment	
+COLUMN	accounts	2	user_id	int	NO	<NULL>		
+COLUMN	accounts	3	account_type	enum('savings','current')	NO	savings		utf8mb4_unicode_ci
+COLUMN	accounts	4	balance	decimal(14,2)	NO	0.00		
+COLUMN	accounts	5	status	enum('active','frozen','closed')	NO	active		utf8mb4_unicode_ci
+COLUMN	accounts	6	created_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	alerts	1	alert_id	bigint	NO	<NULL>	auto_increment	
+COLUMN	alerts	2	txn_id	bigint	NO	<NULL>		
+COLUMN	alerts	3	rule_name	varchar(50)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	alerts	4	risk_score	decimal(5,2)	NO	<NULL>		
+COLUMN	alerts	5	reasons	json	YES	<NULL>		
+COLUMN	alerts	6	status	enum('open','investigated','confirmed','false_positive')	NO	open		utf8mb4_unicode_ci
+COLUMN	alerts	7	created_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	alerts	8	reviewed_at	timestamp	YES	<NULL>		
+COLUMN	audit_log	1	audit_id	bigint	NO	<NULL>	auto_increment	
+COLUMN	audit_log	2	table_name	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	audit_log	3	record_id	bigint	NO	<NULL>		
+COLUMN	audit_log	4	action	enum('INSERT','UPDATE','DELETE')	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	audit_log	5	old_value_json	json	YES	<NULL>		
+COLUMN	audit_log	6	new_value_json	json	YES	<NULL>		
+COLUMN	audit_log	7	changed_by	varchar(100)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	audit_log	8	changed_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	behaviour_baselines	1	baseline_id	int	NO	<NULL>	auto_increment	
+COLUMN	behaviour_baselines	2	account_id	int	NO	<NULL>		
+COLUMN	behaviour_baselines	3	avg_amount	decimal(12,2)	YES	<NULL>		
+COLUMN	behaviour_baselines	4	stddev_amount	decimal(12,2)	YES	<NULL>		
+COLUMN	behaviour_baselines	5	peak_hours_json	json	YES	<NULL>		
+COLUMN	behaviour_baselines	6	typical_cities_json	json	YES	<NULL>		
+COLUMN	behaviour_baselines	7	updated_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED on update CURRENT_TIMESTAMP	
+COLUMN	devices	1	device_id	int	NO	<NULL>	auto_increment	
+COLUMN	devices	2	device_type	enum('mobile','desktop','tablet')	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	devices	3	os	varchar(50)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	devices	4	browser	varchar(50)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	devices	5	fingerprint_hash	varchar(64)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	locations	1	location_id	int	NO	<NULL>	auto_increment	
+COLUMN	locations	2	city	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	locations	3	state	varchar(100)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	locations	4	country	varchar(100)	NO	India		utf8mb4_unicode_ci
+COLUMN	locations	5	latitude	decimal(9,6)	NO	<NULL>		
+COLUMN	locations	6	longitude	decimal(9,6)	NO	<NULL>		
+COLUMN	login_history	1	login_id	bigint	NO	<NULL>	auto_increment	
+COLUMN	login_history	2	account_id	int	NO	<NULL>		
+COLUMN	login_history	3	device_id	int	NO	<NULL>		
+COLUMN	login_history	4	location_id	int	NO	<NULL>		
+COLUMN	login_history	5	login_time	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	login_history	6	success	tinyint(1)	NO	1		
+COLUMN	merchant_categories	1	category_id	int	NO	<NULL>	auto_increment	
+COLUMN	merchant_categories	2	category_name	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	merchant_categories	3	description	text	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	merchants	1	merchant_id	int	NO	<NULL>	auto_increment	
+COLUMN	merchants	2	merchant_name	varchar(200)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	merchants	3	category_id	int	NO	<NULL>		
+COLUMN	merchants	4	city	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	merchants	5	latitude	decimal(9,6)	NO	<NULL>		
+COLUMN	merchants	6	longitude	decimal(9,6)	NO	<NULL>		
+COLUMN	merchants	7	risk_score	decimal(5,2)	YES	0.00		
+COLUMN	rule_config	1	rule_id	int	NO	<NULL>	auto_increment	
+COLUMN	rule_config	2	rule_name	varchar(50)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	rule_config	3	enabled	tinyint(1)	NO	1		
+COLUMN	rule_config	4	threshold_value	decimal(12,4)	NO	<NULL>		
+COLUMN	rule_config	5	parameters_json	json	YES	<NULL>		
+COLUMN	rule_config	6	updated_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED on update CURRENT_TIMESTAMP	
+COLUMN	rule_impossible_travel	1	txn_id	bigint	NO	0		
+COLUMN	rule_impossible_travel	2	account_id	int	NO	<NULL>		
+COLUMN	rule_impossible_travel	3	distance_km	decimal(10,2)	YES	<NULL>		
+COLUMN	rule_impossible_travel	4	minutes_diff	decimal(25,1)	YES	<NULL>		
+COLUMN	rule_impossible_travel	5	implied_speed_kmh	decimal(13,0)	YES	<NULL>		
+COLUMN	rule_impossible_travel	6	max_speed_kmh	decimal(12,4)	NO	<NULL>		
+COLUMN	rule_merchant_risk	1	txn_id	bigint	NO	0		
+COLUMN	rule_merchant_risk	2	account_id	int	NO	<NULL>		
+COLUMN	rule_merchant_risk	3	merchant_id	int	NO	0		
+COLUMN	rule_merchant_risk	4	merchant_name	varchar(200)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	rule_merchant_risk	5	total_txns	bigint	NO	0		
+COLUMN	rule_merchant_risk	6	alert_count	bigint	NO	0		
+COLUMN	rule_merchant_risk	7	merchant_alert_pct	decimal(26,2)	YES	<NULL>		
+COLUMN	rule_merchant_risk	8	platform_alert_pct	decimal(26,2)	YES	<NULL>		
+COLUMN	rule_merchant_risk	9	risk_multiplier	decimal(27,2)	YES	<NULL>		
+COLUMN	rule_merchant_risk	10	threshold	decimal(12,4)	NO	<NULL>		
+COLUMN	rule_new_device	1	txn_id	bigint	NO	0		
+COLUMN	rule_new_device	2	account_id	int	NO	<NULL>		
+COLUMN	rule_new_device	3	device_id	int	NO	<NULL>		
+COLUMN	rule_new_device	4	fingerprint_hash	varchar(64)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	rule_new_device	5	device_type	enum('mobile','desktop','tablet')	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	rule_new_device	6	os	varchar(50)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	rule_off_hours	1	txn_id	bigint	NO	0		
+COLUMN	rule_off_hours	2	account_id	int	NO	<NULL>		
+COLUMN	rule_off_hours	3	txn_hour	int	YES	<NULL>		
+COLUMN	rule_off_hours	4	hour_pct	decimal(26,2)	YES	<NULL>		
+COLUMN	rule_off_hours	5	threshold_pct	decimal(15,4)	NO	0.0000		
+COLUMN	rule_velocity	1	txn_id	bigint	NO	0		
+COLUMN	rule_velocity	2	account_id	int	NO	<NULL>		
+COLUMN	rule_velocity	3	txn_time	timestamp	NO	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	rule_velocity	4	txns_in_window	bigint	NO	0		
+COLUMN	rule_velocity	5	velocity_limit	bigint unsigned	NO	0		
+COLUMN	rule_velocity	6	window_minutes	bigint unsigned	NO	0		
+COLUMN	rule_zscore	1	txn_id	bigint	NO	0		
+COLUMN	rule_zscore	2	account_id	int	NO	<NULL>		
+COLUMN	rule_zscore	3	amount	decimal(12,2)	NO	<NULL>		
+COLUMN	rule_zscore	4	avg_amt	decimal(13,2)	YES	<NULL>		
+COLUMN	rule_zscore	5	stddev_amt	double	YES	<NULL>		
+COLUMN	rule_zscore	6	z_score	double	YES	<NULL>		
+COLUMN	rule_zscore	7	threshold	decimal(12,4)	NO	<NULL>		
+COLUMN	transactions	1	txn_id	bigint	NO	<NULL>	auto_increment	
+COLUMN	transactions	2	account_id	int	NO	<NULL>		
+COLUMN	transactions	3	merchant_id	int	NO	<NULL>		
+COLUMN	transactions	4	device_id	int	NO	<NULL>		
+COLUMN	transactions	5	location_id	int	NO	<NULL>		
+COLUMN	transactions	6	amount	decimal(12,2)	NO	<NULL>		
+COLUMN	transactions	7	txn_time	timestamp	NO	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	transactions	8	status	enum('success','pending','failed')	NO	success		utf8mb4_unicode_ci
+COLUMN	transactions	9	metadata_json	json	YES	<NULL>		
+COLUMN	users	1	user_id	int	NO	<NULL>	auto_increment	
+COLUMN	users	2	full_name	varchar(150)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	users	3	email	varchar(255)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	users	4	phone	varchar(20)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	users	5	date_of_birth	date	YES	<NULL>		
+COLUMN	users	6	created_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	v_active_alerts	1	alert_id	bigint	NO	0		
+COLUMN	v_active_alerts	2	txn_id	bigint	NO	<NULL>		
+COLUMN	v_active_alerts	3	rule_name	varchar(50)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	4	risk_score	decimal(5,2)	NO	<NULL>		
+COLUMN	v_active_alerts	5	reasons	json	YES	<NULL>		
+COLUMN	v_active_alerts	6	status	enum('open','investigated','confirmed','false_positive')	NO	open		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	7	created_at	timestamp	YES	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	v_active_alerts	8	amount	decimal(12,2)	NO	<NULL>		
+COLUMN	v_active_alerts	9	txn_time	timestamp	NO	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	v_active_alerts	10	account_id	int	NO	0		
+COLUMN	v_active_alerts	11	user_name	varchar(150)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	12	email	varchar(255)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	13	merchant_name	varchar(200)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	14	merchant_category	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	15	txn_city	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	16	device_type	enum('mobile','desktop','tablet')	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_active_alerts	17	device_os	varchar(50)	YES	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_alerts_by_city_day	1	city	varchar(100)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_alerts_by_city_day	2	txn_date	date	YES	<NULL>		
+COLUMN	v_alerts_by_city_day	3	alert_count	bigint	NO	0		
+COLUMN	v_alerts_by_city_day	4	avg_risk_score	decimal(6,2)	YES	<NULL>		
+COLUMN	v_daily_txn_summary	1	txn_date	date	YES	<NULL>		
+COLUMN	v_daily_txn_summary	2	total_txns	bigint	NO	0		
+COLUMN	v_daily_txn_summary	3	total_amount	decimal(34,2)	YES	<NULL>		
+COLUMN	v_daily_txn_summary	4	avg_amount	decimal(13,2)	YES	<NULL>		
+COLUMN	v_daily_txn_summary	5	min_amount	decimal(12,2)	YES	<NULL>		
+COLUMN	v_daily_txn_summary	6	max_amount	decimal(12,2)	YES	<NULL>		
+COLUMN	v_daily_txn_summary	7	unique_accounts	bigint	NO	0		
+COLUMN	v_top_risky_users	1	account_id	int	NO	0		
+COLUMN	v_top_risky_users	2	full_name	varchar(150)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_top_risky_users	3	email	varchar(255)	NO	<NULL>		utf8mb4_unicode_ci
+COLUMN	v_top_risky_users	4	total_alerts	bigint	NO	0		
+COLUMN	v_top_risky_users	5	avg_risk_score	decimal(6,2)	YES	<NULL>		
+COLUMN	v_top_risky_users	6	max_risk_score	decimal(5,2)	YES	<NULL>		
+COLUMN	v_transaction_risk	1	txn_id	bigint	NO	0		
+COLUMN	v_transaction_risk	2	account_id	int	NO	<NULL>		
+COLUMN	v_transaction_risk	3	amount	decimal(12,2)	NO	<NULL>		
+COLUMN	v_transaction_risk	4	txn_time	timestamp	NO	CURRENT_TIMESTAMP	DEFAULT_GENERATED	
+COLUMN	v_transaction_risk	5	risk_score	int	NO	0		
+COLUMN	v_transaction_risk	6	reasons	varchar(345)	YES	<NULL>		utf8mb4_unicode_ci
+CONSTRAINT	account_devices	fk_ad_account	FOREIGN KEY
+CONSTRAINT	account_devices	fk_ad_device	FOREIGN KEY
+CONSTRAINT	account_devices	PRIMARY	PRIMARY KEY
+CONSTRAINT	accounts	chk_accounts_balance	CHECK
+CONSTRAINT	accounts	fk_accounts_user	FOREIGN KEY
+CONSTRAINT	accounts	PRIMARY	PRIMARY KEY
+CONSTRAINT	alerts	fk_alert_txn	FOREIGN KEY
+CONSTRAINT	alerts	PRIMARY	PRIMARY KEY
+CONSTRAINT	alerts	txn_id	UNIQUE
+CONSTRAINT	audit_log	PRIMARY	PRIMARY KEY
+CONSTRAINT	behaviour_baselines	account_id	UNIQUE
+CONSTRAINT	behaviour_baselines	fk_bb_account	FOREIGN KEY
+CONSTRAINT	behaviour_baselines	PRIMARY	PRIMARY KEY
+CONSTRAINT	devices	fingerprint_hash	UNIQUE
+CONSTRAINT	devices	PRIMARY	PRIMARY KEY
+CONSTRAINT	locations	chk_loc_latitude	CHECK
+CONSTRAINT	locations	chk_loc_longitude	CHECK
+CONSTRAINT	locations	PRIMARY	PRIMARY KEY
+CONSTRAINT	locations	uq_city_country	UNIQUE
+CONSTRAINT	login_history	fk_lh_account	FOREIGN KEY
+CONSTRAINT	login_history	fk_lh_device	FOREIGN KEY
+CONSTRAINT	login_history	fk_lh_location	FOREIGN KEY
+CONSTRAINT	login_history	PRIMARY	PRIMARY KEY
+CONSTRAINT	merchant_categories	category_name	UNIQUE
+CONSTRAINT	merchant_categories	PRIMARY	PRIMARY KEY
+CONSTRAINT	merchants	fk_merchants_category	FOREIGN KEY
+CONSTRAINT	merchants	PRIMARY	PRIMARY KEY
+CONSTRAINT	rule_config	PRIMARY	PRIMARY KEY
+CONSTRAINT	rule_config	rule_name	UNIQUE
+CONSTRAINT	transactions	chk_txn_amount	CHECK
+CONSTRAINT	transactions	fk_txn_account	FOREIGN KEY
+CONSTRAINT	transactions	fk_txn_device	FOREIGN KEY
+CONSTRAINT	transactions	fk_txn_location	FOREIGN KEY
+CONSTRAINT	transactions	fk_txn_merchant	FOREIGN KEY
+CONSTRAINT	transactions	PRIMARY	PRIMARY KEY
+CONSTRAINT	users	email	UNIQUE
+CONSTRAINT	users	PRIMARY	PRIMARY KEY
+FK	account_devices	fk_ad_account	account_id	accounts	account_id	CASCADE	NO ACTION
+FK	account_devices	fk_ad_device	device_id	devices	device_id	CASCADE	NO ACTION
+FK	accounts	fk_accounts_user	user_id	users	user_id	CASCADE	NO ACTION
+FK	alerts	fk_alert_txn	txn_id	transactions	txn_id	CASCADE	NO ACTION
+FK	behaviour_baselines	fk_bb_account	account_id	accounts	account_id	CASCADE	NO ACTION
+FK	login_history	fk_lh_account	account_id	accounts	account_id	CASCADE	NO ACTION
+FK	login_history	fk_lh_device	device_id	devices	device_id	RESTRICT	NO ACTION
+FK	login_history	fk_lh_location	location_id	locations	location_id	RESTRICT	NO ACTION
+FK	merchants	fk_merchants_category	category_id	merchant_categories	category_id	RESTRICT	NO ACTION
+FK	transactions	fk_txn_account	account_id	accounts	account_id	CASCADE	NO ACTION
+FK	transactions	fk_txn_device	device_id	devices	device_id	RESTRICT	NO ACTION
+FK	transactions	fk_txn_location	location_id	locations	location_id	RESTRICT	NO ACTION
+FK	transactions	fk_txn_merchant	merchant_id	merchants	merchant_id	RESTRICT	NO ACTION
+CHECK	accounts	chk_accounts_balance	(`balance` >= 0)
+CHECK	locations	chk_loc_latitude	(`latitude` between -(90) and 90)
+CHECK	locations	chk_loc_longitude	(`longitude` between -(180) and 180)
+CHECK	transactions	chk_txn_amount	(`amount` > 0)
+INDEX	account_devices	idx_ad_device	1	device_id	1
+INDEX	account_devices	PRIMARY	1	account_id	0
+INDEX	account_devices	PRIMARY	2	device_id	0
+INDEX	accounts	fk_accounts_user	1	user_id	1
+INDEX	accounts	PRIMARY	1	account_id	0
+INDEX	alerts	idx_alert_rule	1	rule_name	1
+INDEX	alerts	idx_alert_status	1	status	1
+INDEX	alerts	idx_alert_status	2	created_at	1
+INDEX	alerts	PRIMARY	1	alert_id	0
+INDEX	alerts	txn_id	1	txn_id	0
+INDEX	audit_log	idx_audit_table_time	1	table_name	1
+INDEX	audit_log	idx_audit_table_time	2	changed_at	1
+INDEX	audit_log	PRIMARY	1	audit_id	0
+INDEX	behaviour_baselines	account_id	1	account_id	0
+INDEX	behaviour_baselines	PRIMARY	1	baseline_id	0
+INDEX	devices	fingerprint_hash	1	fingerprint_hash	0
+INDEX	devices	PRIMARY	1	device_id	0
+INDEX	locations	PRIMARY	1	location_id	0
+INDEX	locations	uq_city_country	1	city	0
+INDEX	locations	uq_city_country	2	country	0
+INDEX	login_history	fk_lh_device	1	device_id	1
+INDEX	login_history	fk_lh_location	1	location_id	1
+INDEX	login_history	idx_lh_account_time	1	account_id	1
+INDEX	login_history	idx_lh_account_time	2	login_time	1
+INDEX	login_history	PRIMARY	1	login_id	0
+INDEX	merchant_categories	category_name	1	category_name	0
+INDEX	merchant_categories	PRIMARY	1	category_id	0
+INDEX	merchants	fk_merchants_category	1	category_id	1
+INDEX	merchants	PRIMARY	1	merchant_id	0
+INDEX	rule_config	PRIMARY	1	rule_id	0
+INDEX	rule_config	rule_name	1	rule_name	0
+INDEX	transactions	fk_txn_device	1	device_id	1
+INDEX	transactions	idx_txn_account_time	1	account_id	1
+INDEX	transactions	idx_txn_account_time	2	txn_time	1
+INDEX	transactions	idx_txn_location	1	location_id	1
+INDEX	transactions	idx_txn_merchant_time	1	merchant_id	1
+INDEX	transactions	idx_txn_merchant_time	2	txn_time	1
+INDEX	transactions	idx_txn_time	1	txn_time	1
+INDEX	transactions	PRIMARY	1	txn_id	0
+INDEX	users	email	1	email	0
+INDEX	users	PRIMARY	1	user_id	0
+ROUTINE	FUNCTION	haversine_km
+ROUTINE	PROCEDURE	backfill_alerts
+ROUTINE	PROCEDURE	refresh_behaviour_baselines
+ROUTINE	PROCEDURE	score_transaction
+ROUTINE	PROCEDURE	transfer_funds
+VIEW	rule_impossible_travel
+VIEW	rule_merchant_risk
+VIEW	rule_new_device
+VIEW	rule_off_hours
+VIEW	rule_velocity
+VIEW	rule_zscore
+VIEW	v_active_alerts
+VIEW	v_alerts_by_city_day
+VIEW	v_daily_txn_summary
+VIEW	v_top_risky_users
+VIEW	v_transaction_risk
+TRIGGER	trg_after_alert_update	alerts	AFTER	UPDATE
+TRIGGER	trg_after_txn_insert	transactions	AFTER	INSERT
+TRIGGER	trg_before_alert_update	alerts	BEFORE	UPDATE
+EVENT	evt_refresh_baselines

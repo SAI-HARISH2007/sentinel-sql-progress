@@ -1,0 +1,36 @@
+name: CI
+# Builds the database through every week that exists in the repo and runs that week's checks.
+# Because weeks are published one at a time, this proves each push is internally consistent.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  weeks:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: sentinel_root_2026
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -psentinel_root_2026"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Allow stored functions (binary logging is on by default in MySQL 8)
+        run: mysql -h 127.0.0.1 -uroot -psentinel_root_2026 -e "SET GLOBAL log_bin_trust_function_creators = 1; SET GLOBAL event_scheduler = ON;"
+      - name: Build and check every week present in this commit
+        env:
+          DB_HOST: 127.0.0.1
+          DB_ROOT_PASS: sentinel_root_2026
+        run: |
+          ls -d week-[0-9][0-9]-* >/dev/null 2>&1 || { echo "no week folders yet (scaffold commit): nothing to build"; exit 0; }
+          LAST=$(ls -d week-[0-9][0-9]-* | sed -E 's/^week-0*([0-9]+)-.*/\1/' | sort -n | tail -1)
+          echo "highest week present: $LAST"
+          scripts/build.sh "$LAST"
+          scripts/check.sh "$LAST"
