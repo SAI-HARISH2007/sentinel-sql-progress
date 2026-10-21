@@ -366,7 +366,8 @@ let cur = PERSONAS[0], S = { ...cur.S }, running = false, runId = 0, seq = { ale
 
 /* ============================================================ helpers */
 const $ = (s, r = document) => r.querySelector(s);
-const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const INSTANT = /instant/.test(location.hash);
+const RM = INSTANT || matchMedia('(prefers-reduced-motion: reduce)').matches;
 const spd = () => RM ? 0.05 : Number($('#speed').value);
 const wait = ms => new Promise(r => setTimeout(r, ms * spd()));
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -398,9 +399,10 @@ async function typeInto(el, text, tok) {
   el.innerHTML = hl(text); el.classList.remove('caret');
 }
 function countUp(el, to, ms) {
+  if (RM) { el.textContent = to.toLocaleString('en-IN'); return; }
   const t0 = performance.now();
   (function f(t) {
-    const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    const k = Math.max(0, Math.min(1, (t - t0) / ms)), e = 1 - Math.pow(1 - k, 3);
     el.textContent = Math.round(to * e).toLocaleString('en-IN');
     if (k < 1 && !RM) requestAnimationFrame(f);
   })(t0);
@@ -576,7 +578,7 @@ async function simulate() {
     await wait(250); chk(tok);
     arc.style.strokeDashoffset = 251.3 * (1 - score / 6);
     const g = $('#gnum'), t0 = performance.now(), dur = Math.max(1, 1100 * spd());
-    await new Promise(done => (function f(t) { const k = Math.min(1, (t - t0) / dur); g.textContent = Math.round(score * k); k < 1 ? requestAnimationFrame(f) : done(); })(t0));
+    if (RM) g.textContent = score; else await new Promise(done => (function f(t) { const k = Math.max(0, Math.min(1, (t - t0) / dur)); g.textContent = Math.round(score * k); k < 1 ? requestAnimationFrame(f) : done(); })(t0));
     chk(tok);
     $('#verdict').textContent = score ? `score ${score} > 0 → RAISE ALERT` : 'score 0 → no alert';
     $('#verdict').className = 'text-lg font-bold ' + (score ? 'text-rose-300' : 'text-emerald-300');
@@ -669,6 +671,8 @@ new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { playFlow(); o.
 
 /* ============================================================ boot */
 renderPersonas(); renderCfg(); drawNodes(); drawArch(); syncControls(); updateAll();
+const _h = location.hash.match(/#run=(\w+)/);            /* e.g. demo.html#run=z auto-plays a persona (used for report screenshots) */
+if (_h) { const p = PERSONAS.find(x => x.id === _h[1]); if (p) { if (!INSTANT) $('#speed').value = '0.45'; pick(p); setTimeout(simulate, 400); } }
 </script>
 </body>
 </html>
