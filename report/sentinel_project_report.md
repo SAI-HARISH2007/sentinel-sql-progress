@@ -267,7 +267,7 @@ So the drop from 1,349 to 174 comes from the single-column index on `txn_time` s
 
 Sentinel has no separate application server. The backend is the MySQL database itself: the trigger, the stored procedures, the views and the `rule_config` table do all the detection, and a client only has to run `INSERT` and `SELECT`. Two roles define how a client may talk to it. `txn_app` may `INSERT` into `transactions` and call `transfer_funds()`. `api_reader` may only `SELECT` from four views and `rule_config`, so a reporting layer can read alerts but cannot change anything.
 
-There is no web application connected to the live database yet. A FastAPI service that reads through `api_reader` and a dashboard on top of it are planned (Section 8). What exists today is `demo.html`, a single page that runs in any browser and re-implements the six rules in JavaScript. It has three parts: a simulator where the viewer picks a persona or moves sliders for amount, time of day, device and location; an animated five-stage pipeline (INSERT, trigger, rule evaluation, score, alert row); and an architecture diagram of the tables, trigger and procedures. Appendix C shows the screenshots. It does not talk to MySQL, so the SQL scripts remain the authoritative behaviour.
+There is no web application connected to the live database yet. A FastAPI service that reads through `api_reader` and a dashboard on top of it are listed as future work (Section 8). What exists today is `demo.html`, a single page that runs in any browser and re-implements the six rules in JavaScript. It has three parts: a simulator where the viewer picks a persona or moves sliders for amount, time of day, device and location; an animated five-stage pipeline (INSERT, trigger, rule evaluation, score, alert row); and an architecture diagram of the tables, trigger and procedures. Appendix C shows the screenshots. It does not talk to MySQL, so the SQL scripts remain the authoritative behaviour.
 
 The 27 Python tests (`pytest`) connect to the running database and check the same behaviour from outside, through the database driver.
 
@@ -335,6 +335,7 @@ Future work, roughly in the order we would do it:
 5. Put a thin read-only API on the `api_reader` role, with a dashboard over the existing reporting views.
 6. Add a `txn_type` column so transfers, purchases and refunds can be scored differently.
 7. Try the asynchronous alternative (queue plus worker) and measure its latency and throughput against the in-trigger design.
+8. Build a small API service that reads through the `api_reader` role, and a dashboard on top of it, so alerts can be reviewed on a live database instead of the standalone demo page.
 
 ---
 
