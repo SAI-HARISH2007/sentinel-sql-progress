@@ -3,414 +3,280 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sentinel Fraud Engine</title>
-<meta name="description" content="Interactive walkthrough of Sentinel, a fraud scoring engine that runs inside MySQL triggers.">
+<title>Sentinel · In-Database Fraud Engine</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <style>
-:root {
-  --paper:#e9ebe4; --card:#f6f7f2; --ink:#16181a; --mute:#575c58; --rule:#bfc4ba; --faint:#d9dcd3;
-  --acc:#d4391a; --acc-soft:rgba(212,57,26,.09); --on-acc:#fff;
-  --term:#16181a; --term-ink:#e7e9e1; --term-mute:#8b918a; --term-acc:#ff8466;
-  --sans:"Satoshi","Geist","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
-  --mono:"Geist Mono","JetBrains Mono","Cascadia Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  --r:2px; --shadow:3px 3px 0 var(--ink);
-}
-@media (prefers-color-scheme: dark) {
-  :root { --paper:#121513; --card:#1a1d1a; --ink:#ebece5; --mute:#9aa098; --rule:#363b34; --faint:#252923;
-    --acc:#ff6a45; --acc-soft:rgba(255,106,69,.12); --on-acc:#1a0d08; --term:#0c0e0c; --shadow:3px 3px 0 #000; }
-}
-* { box-sizing:border-box; }
-html { scroll-behavior:smooth; }
-body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:16px; line-height:1.5;
-  background-image:linear-gradient(var(--faint) 1px,transparent 1px),linear-gradient(90deg,var(--faint) 1px,transparent 1px);
-  background-size:32px 32px; background-position:-1px -1px; }
-.mono { font-family:var(--mono); }
-.wrap { max-width:1200px; margin:0 auto; padding:0 20px; }
-a { color:inherit; }
-button, select, input { font:inherit; color:inherit; }
-:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
-.hidden { display:none !important; }
+  :root { --bg:#070b14; --line:#1e293b; }
+  html { scroll-behavior:smooth; }
+  body { background:var(--bg); color:#cbd5e1; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  #bg { position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.55; }
+  main,header,footer { position:relative; z-index:1; }
+  .glass { background:linear-gradient(180deg,rgba(15,23,42,.82),rgba(10,15,28,.82)); border:1px solid var(--line); backdrop-filter:blur(8px); border-radius:1rem; }
+  .grad-text { background:linear-gradient(90deg,#38bdf8,#a78bfa 55%,#fb7185); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .btn { transition:transform .15s, box-shadow .2s, background .2s; }
+  .btn:active { transform:scale(.96); }
+  .btn-go { background:linear-gradient(90deg,#0ea5e9,#6366f1); color:#fff; }
+  .btn-go:hover:not(:disabled) { box-shadow:0 0 28px 2px rgba(99,102,241,.55); transform:translateY(-1px); }
+  .btn-go:disabled { opacity:.5; cursor:not-allowed; }
 
-/* top bar */
-.bar { position:sticky; top:0; z-index:20; background:var(--paper); border-bottom:1px solid var(--ink); }
-.bar .wrap { display:flex; justify-content:space-between; align-items:center; height:44px; font-size:.82rem; }
-.bar b { font-family:var(--mono); letter-spacing:.02em; }
-.bar nav { display:flex; gap:22px; }
-.bar nav a { text-decoration:none; padding:4px 0; border-bottom:2px solid transparent; }
-.bar nav a:hover { border-color:var(--acc); }
+  .persona { position:relative; overflow:hidden; transition:transform .2s, border-color .2s, box-shadow .25s; }
+  .persona:hover { transform:translateY(-3px); }
+  .persona::after { content:""; position:absolute; inset:0; background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(56,189,248,.16),transparent 60%); opacity:0; transition:opacity .25s; pointer-events:none; }
+  .persona:hover::after { opacity:1; }
+  .persona.sel { border-color:#38bdf8; box-shadow:0 0 0 1px #38bdf8, 0 8px 40px -8px rgba(56,189,248,.45); }
+  .persona .ico { display:inline-block; transition:transform .3s; }
+  .persona:hover .ico { transform:scale(1.25) rotate(-8deg); }
 
-/* header */
-header.top { padding:56px 0 36px; }
-.hgrid { display:grid; grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:40px; align-items:end; }
-h1 { margin:0; font-weight:800; font-size:clamp(3.6rem,13vw,9.6rem); line-height:.82; letter-spacing:-.055em; }
-h1 i { font-style:normal; color:var(--acc); }
-.lede { font-size:1.12rem; max-width:44ch; margin:0 0 6px; }
-.lede code, .copy code, td code { font-family:var(--mono); font-size:.88em; background:var(--faint); padding:1px 5px; border-radius:var(--r); }
-.who { margin-top:10px; color:var(--mute); font-size:.85rem; }
-.stats { margin-top:44px; display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid var(--ink); border-bottom:1px solid var(--ink); background:var(--card); }
-.stats div { padding:14px 16px 12px; border-left:1px solid var(--rule); }
-.stats div:first-child { border-left:0; }
-.stats b { display:block; font-family:var(--mono); font-size:1.9rem; letter-spacing:-.03em; font-weight:600; }
-.stats span { font-size:.78rem; color:var(--mute); }
+  .track { position:relative; height:4px; background:#1e293b; border-radius:9px; }
+  .track .fill { position:absolute; left:0; top:0; bottom:0; width:0; border-radius:9px; background:linear-gradient(90deg,#38bdf8,#a78bfa); box-shadow:0 0 14px #6366f1; transition:width .7s cubic-bezier(.4,0,.2,1); }
+  .pnode .dot { transition:all .35s; }
+  .pnode.on .dot { background:#0ea5e9; border-color:#7dd3fc; color:#fff; box-shadow:0 0 0 6px rgba(56,189,248,.18),0 0 22px #38bdf8; }
+  .pnode.done .dot { background:#064e3b; border-color:#34d399; color:#6ee7b7; }
+  .pnode.alert .dot { background:#4c0519; border-color:#fb7185; color:#fecdd3; box-shadow:0 0 0 6px rgba(251,113,133,.18),0 0 22px #fb7185; }
+  .packet { position:absolute; top:24px; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; background:#fff; box-shadow:0 0 16px 6px rgba(125,211,252,.85); transition:left .7s cubic-bezier(.4,0,.2,1), background .3s, box-shadow .3s; left:0; opacity:0; }
+  .packet.show { opacity:1; }
+  .packet.bad { background:#fecdd3; box-shadow:0 0 18px 7px rgba(251,113,133,.85); }
 
-/* sections */
-section.sec { padding:56px 0; border-top:1px solid var(--ink); }
-.sgrid { display:grid; grid-template-columns:230px minmax(0,1fr); gap:40px; }
-.side { position:sticky; top:68px; align-self:start; }
-.side h2 { margin:0 0 10px; font-size:1.7rem; line-height:1.05; letter-spacing:-.03em; font-weight:800; }
-.side p { margin:0 0 12px; color:var(--mute); font-size:.92rem; }
-.side kbd { font-family:var(--mono); font-size:.78rem; border:1px solid var(--ink); border-bottom-width:2px; padding:0 5px; border-radius:var(--r); background:var(--card); }
+  .step { opacity:.25; transform:translateY(14px) scale(.985); filter:saturate(.4); transition:all .55s cubic-bezier(.2,.8,.2,1); }
+  .step.live { opacity:1; transform:none; filter:none; }
+  .step.live.pulse { box-shadow:0 0 0 1px rgba(56,189,248,.5),0 0 40px -10px rgba(56,189,248,.5); }
+  .step.hot.live { box-shadow:0 0 0 1px rgba(251,113,133,.6),0 0 46px -8px rgba(251,113,133,.55); }
 
-.btn { appearance:none; cursor:pointer; background:var(--card); border:1px solid var(--ink); border-radius:var(--r); padding:9px 16px; font-weight:600; font-size:.9rem; box-shadow:var(--shadow); transition:transform .12s, box-shadow .12s; }
-.btn:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink); }
-.btn:active { transform:translate(3px,3px); box-shadow:0 0 0 var(--ink); }
-.btn.go { background:var(--acc); color:var(--on-acc); }
-.btn:disabled { opacity:.55; cursor:not-allowed; transform:none; box-shadow:var(--shadow); }
-.btn.small { padding:5px 10px; font-size:.8rem; box-shadow:2px 2px 0 var(--ink); }
-.link { background:none; border:0; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; font-size:.82rem; color:var(--mute); }
+  .console { background:#050810; border:1px solid #1e293b; border-radius:.7rem; padding:.8rem 1rem; font-size:.78rem; line-height:1.55; white-space:pre-wrap; min-height:3.6rem; overflow-x:auto; }
+  .console .kw { color:#c084fc; } .console .fn { color:#7dd3fc; } .console .num { color:#fbbf24; } .console .str { color:#86efac; } .console .cm { color:#64748b; }
+  .caret::after { content:"▋"; color:#38bdf8; animation:blink 1s steps(2) infinite; margin-left:1px; }
+  @keyframes blink { 50% { opacity:0; } }
 
-/* config */
-#cfgPanel { border:1px dashed var(--ink); background:var(--card); padding:14px 16px; margin-bottom:18px; }
-#cfgPanel p { margin:0 0 10px; font-size:.86rem; color:var(--mute); }
-#cfg { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px 24px; font-size:.78rem; }
-#cfg label { display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--rule); padding-bottom:4px; }
-#cfg input { width:84px; text-align:right; background:var(--paper); border:1px solid var(--ink); border-radius:var(--r); padding:3px 6px; font-family:var(--mono); }
+  .rcard { perspective:900px; height:112px; }
+  .rcard .in { position:relative; width:100%; height:100%; transition:transform .7s cubic-bezier(.3,1.2,.4,1); transform-style:preserve-3d; }
+  .rcard.flip .in { transform:rotateY(180deg); }
+  .rcard .f, .rcard .b { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:.8rem; padding:.7rem .8rem; border:1px solid #1e293b; background:#0a1020; }
+  .rcard .b { transform:rotateY(180deg); }
+  .rcard.hit .b { border-color:#fb7185; background:linear-gradient(160deg,#3b0a1c,#12060b); box-shadow:0 0 28px -4px rgba(251,113,133,.6); }
+  .rcard.miss .b { border-color:#065f46; background:linear-gradient(160deg,#052e22,#06100d); }
+  .rcard.skip .b { border-color:#334155; background:#0b1220; }
+  .rcard.checking .f { border-color:#38bdf8; box-shadow:0 0 20px -2px rgba(56,189,248,.55); animation:scan 1s linear infinite; }
+  @keyframes scan { 0%{ background:linear-gradient(90deg,#0a1020 0,#0f2338 12%,#0a1020 24%);} 100%{ background:linear-gradient(90deg,#0a1020 76%,#0f2338 88%,#0a1020 100%);} }
+  .rcard.hit { animation:shake .5s .55s; }
+  @keyframes shake { 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)} }
 
-/* personas */
-#personas { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--ink); background:var(--card); }
-.persona { appearance:none; text-align:left; cursor:pointer; background:transparent; border:0; border-left:1px solid var(--rule); padding:14px 16px 16px; position:relative; transition:background .15s; min-height:104px; }
-.persona:first-child { border-left:0; }
-.persona:hover { background:var(--acc-soft); }
-.persona .n { font-family:var(--mono); font-size:.72rem; color:var(--mute); }
-.persona b { display:block; margin-top:14px; font-size:1.02rem; letter-spacing:-.01em; }
-.persona span.t { font-family:var(--mono); font-size:.72rem; color:var(--mute); }
-.persona.sel { background:var(--ink); color:var(--paper); }
-.persona.sel .n, .persona.sel span.t { color:var(--paper); opacity:.7; }
-.persona.sel::after { content:""; position:absolute; left:0; right:0; bottom:0; height:4px; background:var(--acc); }
+  .gauge-arc { transition:stroke-dashoffset 1.2s cubic-bezier(.3,1,.4,1), stroke .4s; }
+  .slide-in { animation:slideIn .6s cubic-bezier(.2,.9,.3,1.2) both; }
+  @keyframes slideIn { from { opacity:0; transform:translateX(-40px) scale(.97); } to { opacity:1; transform:none; } }
+  .drop-in { animation:dropIn .55s cubic-bezier(.3,1.4,.5,1) both; }
+  @keyframes dropIn { from { opacity:0; transform:translateY(-26px); } to { opacity:1; transform:none; } }
+  .ring { animation:ring 1.1s ease-out infinite; }
+  @keyframes ring { 0%{ box-shadow:0 0 0 0 rgba(167,139,250,.7);} 100%{ box-shadow:0 0 0 22px rgba(167,139,250,0);} }
 
-/* scenario */
-.scn { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); margin-top:18px; border:1px solid var(--ink); background:var(--card); }
-.scn > div { padding:18px 20px; }
-.scn > div + div { border-left:1px solid var(--ink); display:flex; flex-direction:column; }
-.scn h3 { margin:0; font-size:1.15rem; letter-spacing:-.02em; }
-.tag { font-family:var(--mono); font-size:.7rem; border:1px solid var(--ink); padding:1px 7px; border-radius:var(--r); white-space:nowrap; }
-.row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-.desc { color:var(--mute); font-size:.9rem; margin:6px 0 0; min-height:2.8em; }
-.ctrls { display:grid; grid-template-columns:1fr 1fr; gap:18px 28px; margin-top:18px; font-size:.86rem; }
-.ctrls label { display:block; }
-.ctrls .lab { display:flex; justify-content:space-between; margin-bottom:4px; }
-.ctrls .lab b { font-family:var(--mono); font-weight:600; }
-.ctrls .full { grid-column:1 / -1; }
-select { width:100%; background:var(--paper); border:1px solid var(--ink); border-radius:var(--r); padding:6px 8px; font-family:var(--mono); font-size:.82rem; }
-input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:20px; background:transparent; cursor:pointer; }
-input[type=range]::-webkit-slider-runnable-track { height:2px; background:var(--ink); }
-input[type=range]::-moz-range-track { height:2px; background:var(--ink); }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:20px; margin-top:-9px; background:var(--acc); border:1px solid var(--ink); border-radius:1px; }
-input[type=range]::-moz-range-thumb { width:12px; height:18px; background:var(--acc); border:1px solid var(--ink); border-radius:1px; }
-input[type=checkbox] { accent-color:var(--acc); width:16px; height:16px; vertical-align:-3px; margin-right:6px; }
-.mut { color:var(--mute); }
-.live-h { margin-top:22px; font-family:var(--mono); font-size:.72rem; color:var(--mute); text-transform:uppercase; letter-spacing:.06em; }
-#chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-.chip { font-size:.78rem; padding:3px 9px; border:1px solid var(--ink); border-radius:var(--r); background:var(--paper); transition:background .25s, color .25s; }
-.chip.hit { background:var(--acc); color:var(--on-acc); border-color:var(--acc); font-weight:700; }
-.chip.skip { border-style:dashed; color:var(--mute); border-color:var(--mute); }
-.chip.miss { color:var(--mute); }
+  .ent { cursor:pointer; }
+  .ent rect.box { fill:#0b1324; stroke:#2b3a55; stroke-width:1.4; transition:all .25s; }
+  .ent:hover rect.box, .ent.lit rect.box { stroke:#38bdf8; fill:#0c1c33; filter:drop-shadow(0 0 10px rgba(56,189,248,.55)); }
+  .ent.hotbox rect.box { stroke:#6d4fd1; fill:#160f2e; }
+  .ent.hotbox:hover rect.box, .ent.hotbox.lit rect.box { stroke:#c4b5fd; filter:drop-shadow(0 0 12px rgba(167,139,250,.7)); }
+  .ent.alertbox rect.box { stroke:#7f1d3a; fill:#1a0a12; }
+  .ent.alertbox.lit rect.box, .ent.alertbox:hover rect.box { stroke:#fb7185; filter:drop-shadow(0 0 12px rgba(251,113,133,.7)); }
+  .ent text { pointer-events:none; }
+  .edge { fill:none; stroke:#2b3a55; stroke-width:1.6; transition:stroke .3s; }
+  .edge.flow { stroke:#38bdf8; stroke-dasharray:6 7; animation:dash 1s linear infinite; }
+  .edge.flow.v { stroke:#a78bfa; }
+  .edge.flow.r { stroke:#fb7185; }
+  @keyframes dash { to { stroke-dashoffset:-26; } }
+  #tip { position:absolute; pointer-events:none; opacity:0; transform:translateY(6px); transition:all .18s; z-index:30; max-width:260px; }
+  #tip.show { opacity:1; transform:none; }
 
-#map { width:100%; margin-top:10px; background:var(--paper); border:1px solid var(--ink); display:block; }
-#map .g { stroke:var(--rule); stroke-width:1; }
-#map .city { fill:var(--mute); }
-#map .lbl { font-family:var(--mono); font-size:8.5px; fill:var(--mute); }
-#map .home { fill:var(--ink); }
-#map .home-l { font-family:var(--mono); font-size:9px; fill:var(--ink); font-weight:600; }
-#map .to { fill:var(--ink); } #map .to.bad { fill:var(--acc); }
-#map .to-l { font-family:var(--mono); font-size:9px; fill:var(--ink); font-weight:600; } #map .to-l.bad { fill:var(--acc); }
-#map .arcline { fill:none; stroke:var(--ink); stroke-width:2; stroke-linecap:round; stroke-dasharray:var(--len); stroke-dashoffset:var(--len); } #map .arcline.bad { stroke:var(--acc); }
-#map .arcline.draw { transition:stroke-dashoffset 1.1s ease-out; stroke-dashoffset:0; }
-#speedo { margin-top:12px; font-size:.82rem; color:var(--mute); min-height:3.4em; }
-#speedo b { font-family:var(--mono); color:var(--ink); } #speedo b.bad { color:var(--acc); }
-.bar2 { height:6px; background:var(--faint); margin-top:6px; border:1px solid var(--ink); }
-.bar2 i { display:block; height:100%; background:var(--ink); transition:width .7s cubic-bezier(.4,0,.2,1); } .bar2 i.bad { background:var(--acc); }
-.actions { margin-top:auto; padding-top:16px; display:flex; flex-wrap:wrap; align-items:center; gap:14px; }
-.actions label { font-size:.78rem; color:var(--mute); display:flex; align-items:center; gap:6px; cursor:pointer; }
-.actions select { width:auto; padding:3px 6px; }
+  .arc { stroke-dasharray:var(--len); stroke-dashoffset:var(--len); }
+  .arc.draw { transition:stroke-dashoffset 1.1s ease-out; stroke-dashoffset:0; }
 
-/* pipeline */
-.trackwrap { position:relative; padding:0 4px; }
-.track { position:absolute; left:4px; right:4px; top:21px; height:3px; background:var(--rule); }
-.track i { display:block; height:100%; width:0; background:var(--ink); transition:width .7s cubic-bezier(.4,0,.2,1); }
-.nodes { position:relative; display:flex; justify-content:space-between; }
-.pnode { width:92px; text-align:center; }
-.pnode .dot { width:44px; height:44px; margin:0 auto; background:var(--paper); border:2px solid var(--rule); border-radius:var(--r); transition:background .3s, border-color .3s; }
-.pnode b { display:block; margin-top:8px; font-size:.82rem; }
-.pnode span { font-family:var(--mono); font-size:.66rem; color:var(--mute); }
-.pnode.on .dot { border-color:var(--ink); background:var(--ink); }
-.pnode.done .dot { border-color:var(--ink); background:var(--card); box-shadow:inset 0 0 0 5px var(--card), inset 0 0 0 20px var(--ink); }
-.pnode.alert .dot { border-color:var(--acc); background:var(--acc); }
-.packet { position:absolute; top:22px; left:0; width:14px; height:14px; margin:-7px 0 0 -7px; background:var(--acc); border:2px solid var(--ink); transform:rotate(45deg); opacity:0; transition:left .7s cubic-bezier(.4,0,.2,1), opacity .2s; z-index:2; }
-.packet.show { opacity:1; }
-.spacer { height:12px; }
-.stages { margin-top:14px; }
-.stage { border-top:1px solid var(--ink); padding:18px 0 22px 20px; margin-left:0; position:relative; opacity:.28; transform:translateY(10px); transition:opacity .5s, transform .5s; }
-.stage::before { content:""; position:absolute; left:0; top:-1px; width:6px; height:0; background:var(--ink); transition:height .6s; }
-.stage.live { opacity:1; transform:none; }
-.stage.live::before { height:calc(100% + 1px); }
-.stage.hot.live::before { background:var(--acc); }
-.stage h3 { margin:0; font-size:1.05rem; letter-spacing:-.015em; }
-.stage h3 span { font-weight:400; color:var(--mute); font-size:.88rem; margin-left:8px; }
-.stage h3 code { font-family:var(--mono); font-size:.85em; }
-.console { margin-top:12px; background:var(--term); color:var(--term-ink); border-radius:var(--r); padding:12px 14px; font-family:var(--mono); font-size:.78rem; line-height:1.6; white-space:pre-wrap; min-height:3.6rem; overflow-x:auto; }
-.console .kw { color:var(--term-acc); } .console .fn { color:#fff; font-weight:700; } .console .num { color:#f1d9a0; } .console .str { color:#b7c9a4; } .console .cm { color:var(--term-mute); }
-.caret::after { content:""; display:inline-block; width:.55em; height:1.05em; background:var(--term-ink); vertical-align:-2px; margin-left:2px; animation:blink 1s steps(2) infinite; }
-@keyframes blink { 50% { opacity:0; } }
-.two { display:grid; grid-template-columns:3fr 2fr; gap:14px; align-items:stretch; }
-#trigBadge { border:1px dashed var(--mute); margin-top:12px; display:flex; flex-direction:column; justify-content:center; padding:14px; text-align:center; opacity:.4; transition:opacity .4s, border-color .4s; }
-#trigBadge.on { opacity:1; border:1px solid var(--ink); background:var(--card); }
-#trigBadge.on b { animation:ring 1.2s ease-out infinite; }
-#trigBadge b { font-family:var(--mono); font-size:.84rem; display:inline-block; padding:4px 8px; margin:0 auto; border:1px solid var(--ink); }
-#trigBadge span { font-size:.72rem; color:var(--mute); margin-top:8px; }
-@keyframes ring { 0% { box-shadow:0 0 0 0 var(--acc); } 100% { box-shadow:0 0 0 12px transparent; } }
-.stored { margin-top:12px; padding:9px 12px; border:1px solid var(--ink); background:var(--card); font-family:var(--mono); font-size:.76rem; display:flex; flex-wrap:wrap; gap:4px 20px; }
-.stored em { font-style:normal; color:var(--mute); }
-.win { margin-top:8px; font-size:.74rem; color:var(--mute); display:flex; align-items:center; gap:4px; }
-.win i { width:10px; height:10px; background:var(--rule); display:inline-block; } .win i.now { background:var(--acc); }
-.drop { animation:drop .5s cubic-bezier(.3,1.3,.5,1) both; } @keyframes drop { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:none; } }
-.slide { animation:slide .55s cubic-bezier(.2,.9,.3,1) both; } @keyframes slide { from { opacity:0; transform:translateX(-24px); } to { opacity:1; transform:none; } }
-
-/* rule cards */
-#rules { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
-.rcard { perspective:900px; height:112px; }
-.rcard .in { position:relative; width:100%; height:100%; transition:transform .65s cubic-bezier(.3,1.1,.4,1); transform-style:preserve-3d; }
-.rcard.flip .in { transform:rotateY(180deg); }
-.rcard .f, .rcard .b { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border:1px solid var(--ink); background:var(--card); border-radius:var(--r); padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; }
-.rcard .b { transform:rotateY(180deg); }
-.rcard .f b { font-size:.92rem; }
-.rcard .f span, .rcard .b small { font-family:var(--mono); font-size:.68rem; color:var(--mute); }
-.rcard .b .top { display:flex; justify-content:space-between; font-size:.84rem; font-weight:700; }
-.rcard .b .top em { font-style:normal; font-family:var(--mono); font-size:.72rem; font-weight:600; }
-.rcard .b small { line-height:1.35; font-size:.7rem; }
-.rcard.hit .b { background:var(--acc); color:var(--on-acc); border-color:var(--acc); box-shadow:var(--shadow); }
-.rcard.hit .b small { color:var(--on-acc); opacity:.92; }
-.rcard.skip .b { border-style:dashed; background:transparent; }
-.rcard.checking .f { animation:check .5s steps(2) infinite; }
-@keyframes check { 50% { background:var(--acc-soft); border-color:var(--acc); } }
-.rcard.hit { animation:shake .45s .5s; }
-@keyframes shake { 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)} }
-
-/* meter */
-.score { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:center; margin-top:14px; }
-.big { display:flex; align-items:baseline; gap:8px; font-family:var(--mono); }
-#gnum { font-size:4.6rem; font-weight:600; line-height:.9; letter-spacing:-.05em; }
-.big span { color:var(--mute); }
-.cells { display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-top:12px; }
-.cells i { height:26px; border:1px solid var(--ink); background:var(--card); transition:background .3s; }
-.cells i.on { background:var(--ink); } .cells i.on.bad { background:var(--acc); border-color:var(--acc); }
-.small-cap { font-size:.72rem; color:var(--mute); margin-top:6px; }
-#verdict { font-size:1.25rem; font-weight:800; letter-spacing:-.02em; } #verdict.bad { color:var(--acc); }
-#verdictSub { font-size:.88rem; color:var(--mute); margin-top:4px; }
-
-/* alert table */
-.tbl { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:.76rem; margin-top:12px; }
-.tbl th { text-align:left; font-weight:500; color:var(--mute); padding:0 14px 6px 0; border-bottom:1px solid var(--ink); }
-.tbl td { padding:8px 14px 8px 0; } .tbl tr.row-hit td { background:var(--acc-soft); }
-.pill { background:var(--acc); color:var(--on-acc); padding:1px 7px; font-weight:700; }
-.json { color:#c9d8b5; }
-.note { margin-top:10px; font-size:.78rem; color:var(--mute); }
-.clean { margin-top:12px; border:1px solid var(--ink); background:var(--card); padding:14px 16px; font-size:.92rem; }
-.flash { animation:flash .8s; } @keyframes flash { 0% { box-shadow:inset 0 0 0 100vmax rgba(212,57,26,.14); } 100% { box-shadow:inset 0 0 0 100vmax rgba(212,57,26,0); } }
-
-/* architecture */
-#arch { position:relative; }
-.scroll-x { overflow-x:auto; border:1px solid var(--ink); background:var(--card); }
-#arch-svg { width:100%; min-width:760px; display:block; }
-.ent { cursor:pointer; }
-.ent rect.box { fill:var(--paper); stroke:var(--ink); stroke-width:1.3; transition:fill .25s; }
-.ent:hover rect.box, .ent.lit rect.box { fill:var(--faint); }
-.ent.hotbox rect.box { stroke-dasharray:5 3; }
-.ent.alertbox rect.box { stroke:var(--acc); stroke-width:2; fill:var(--acc-soft); }
-.ent.lit rect.box { stroke-width:2.4; }
-.ent text { pointer-events:none; }
-.t1 { fill:var(--ink); font-family:var(--mono); font-weight:600; } .t2 { fill:var(--mute); font-family:var(--sans); font-size:11px; } .t3 { fill:var(--mute); font-family:var(--sans); font-size:11px; }
-.edge { fill:none; stroke:var(--mute); stroke-width:1.5; } .ahp { fill:var(--mute); }
-.edge.flow { stroke:var(--ink); stroke-width:2.2; stroke-dasharray:6 6; animation:dash 1s linear infinite; }
-.edge.flow.r { stroke:var(--acc); }
-@keyframes dash { to { stroke-dashoffset:-24; } }
-#tip { position:absolute; pointer-events:none; opacity:0; transform:translateY(6px); transition:opacity .15s, transform .15s; z-index:30; max-width:260px; background:var(--ink); color:var(--paper); padding:9px 12px; font-size:.76rem; border-radius:var(--r); }
-#tip.show { opacity:1; transform:none; }
-#tip b { font-family:var(--mono); display:block; margin-bottom:3px; }
-.facts { display:grid; grid-template-columns:repeat(3,1fr); margin-top:18px; border-top:1px solid var(--ink); }
-.facts div { padding:14px 18px 0 0; font-size:.88rem; color:var(--mute); } .facts b { color:var(--ink); display:block; font-size:.95rem; margin-bottom:2px; }
-.facts div + div { padding-left:18px; border-left:1px solid var(--rule); }
-
-footer { border-top:1px solid var(--ink); padding:22px 0 36px; font-size:.78rem; color:var(--mute); }
-footer p { margin:0 0 6px; max-width:90ch; }
-
-#toast { position:fixed; left:50%; bottom:22px; transform:translate(-50%,30px); opacity:0; z-index:50; background:var(--ink); color:var(--paper); padding:9px 16px; font-size:.85rem; border-radius:var(--r); box-shadow:3px 3px 0 var(--acc); transition:transform .35s cubic-bezier(.2,1,.3,1), opacity .35s; pointer-events:none; }
-#toast.show { transform:translate(-50%,0); opacity:1; }
-
-@media (max-width:900px) {
-  .hgrid, .sgrid, .scn, .score, .two { grid-template-columns:1fr; }
-  .side { position:static; } .scn > div + div { border-left:0; border-top:1px solid var(--ink); }
-  .stats { grid-template-columns:repeat(2,1fr); } .stats div { border-top:1px solid var(--rule); }
-  #personas { grid-template-columns:1fr 1fr; } .persona:nth-child(3) { border-left:0; } .persona:nth-child(n+3) { border-top:1px solid var(--rule); }
-  #rules { grid-template-columns:1fr 1fr; } .facts { grid-template-columns:1fr; } .facts div + div { border-left:0; padding-left:0; }
-  .ctrls { grid-template-columns:1fr; }
-  .pnode { width:60px; } .pnode span { display:none; } .bar nav { gap:14px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
-}
+  input[type=range] { -webkit-appearance:none; appearance:none; height:6px; border-radius:6px; background:#1e293b; outline:none; width:100%; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#38bdf8; box-shadow:0 0 12px #38bdf8; cursor:pointer; transition:transform .15s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.25); }
+  input[type=range]::-moz-range-thumb { width:18px; height:18px; border:0; border-radius:50%; background:#38bdf8; box-shadow:0 0 12px #38bdf8; cursor:pointer; }
+  .chip { transition:all .3s; }
+  .chip.hit { background:rgba(251,113,133,.15); border-color:#fb7185; color:#fecdd3; }
+  .chip.miss { background:rgba(52,211,153,.08); border-color:#065f46; color:#6ee7b7; }
+  .chip.skip { color:#64748b; border-color:#1e293b; }
+  .toast { position:fixed; left:50%; bottom:22px; transform:translate(-50%,40px); opacity:0; z-index:50; transition:all .4s cubic-bezier(.2,1,.3,1); }
+  .toast.show { transform:translate(-50%,0); opacity:1; }
+  .flash { animation:flash .8s; }
+  @keyframes flash { 0%{ box-shadow:inset 0 0 0 100vmax rgba(251,113,133,.12);} 100%{ box-shadow:inset 0 0 0 100vmax rgba(251,113,133,0);} }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+  }
 </style>
 </head>
 <body>
+<canvas id="bg"></canvas>
 
-<div class="bar"><div class="wrap">
-  <b>sentinel.sql</b>
-  <nav><a href="#lab">Build a transaction</a><a href="#pipe">Engine</a><a href="#arch">Schema map</a></nav>
-</div></div>
-
-<header class="top"><div class="wrap">
-  <div class="hgrid">
-    <h1>Sentinel<i>.</i></h1>
-    <div>
-      <p class="lede">A fraud engine that lives inside MySQL. Every <code>INSERT</code> fires a trigger that scores the row before the statement returns, so no writer can skip the check.</p>
-      <div class="who">DBMS mini-project, IcfaiTech. Sai Haresh Anand S and Dulam Seshivardhini.</div>
-    </div>
+<header class="max-w-6xl mx-auto px-4 pt-10 pb-6">
+  <div class="inline-flex items-center gap-2 text-xs mono text-sky-300 border border-sky-500/30 bg-sky-500/10 rounded-full px-3 py-1">
+    <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span></span>
+    MySQL 8.4 · pure SQL · no application code in the detection path
   </div>
-  <div id="stats" class="stats">
-    <div><b data-n="12067">0</b><span>seeded transactions</span></div>
-    <div><b data-n="13">0</b><span>tables in 3NF</span></div>
-    <div><b data-n="6">0</b><span>fraud rules</span></div>
-    <div><b>~<span data-n="2" style="font:inherit;color:inherit">0</span> ms</b><span>scoring cost per insert</span></div>
-    <div><b data-n="102">0</b><span>SQL assertions passing</span></div>
+  <h1 class="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">Sentinel<span class="grad-text">.</span></h1>
+  <p class="mt-2 text-lg sm:text-xl text-slate-300 max-w-3xl">A fraud engine that lives <i>inside</i> the database. Every <span class="mono text-sky-300">INSERT</span> is scored by a trigger before the statement returns, so no writer can skip the check.</p>
+  <div id="stats" class="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3">
+    <div class="glass p-3"><div class="text-2xl font-bold text-white mono" data-n="12067">0</div><div class="text-xs text-slate-400">seeded transactions</div></div>
+    <div class="glass p-3"><div class="text-2xl font-bold text-white mono" data-n="13">0</div><div class="text-xs text-slate-400">tables, 3NF</div></div>
+    <div class="glass p-3"><div class="text-2xl font-bold text-white mono" data-n="6">0</div><div class="text-xs text-slate-400">fraud rules</div></div>
+    <div class="glass p-3"><div class="text-2xl font-bold text-white mono">≈<span data-n="2">0</span> ms</div><div class="text-xs text-slate-400">scoring cost per insert</div></div>
+    <div class="glass p-3 col-span-2 sm:col-span-1"><div class="text-2xl font-bold text-white mono" data-n="102">0</div><div class="text-xs text-slate-400">SQL assertions passing</div></div>
   </div>
-</div></header>
+  <nav class="mt-5 flex gap-4 text-sm text-slate-400">
+    <a class="hover:text-sky-300" href="#lab">Simulator</a><a class="hover:text-sky-300" href="#pipe">Engine pipeline</a><a class="hover:text-sky-300" href="#arch">Architecture</a>
+  </nav>
+</header>
 
-<main>
-<section id="lab" class="sec"><div class="wrap sgrid">
-  <div class="side">
-    <h2>Build a transaction</h2>
-    <p>Pick a persona, then bend it. Every slider re-checks the six rules straight away.</p>
-    <p>Keys <kbd>1</kbd> to <kbd>4</kbd> choose a persona, <kbd>Enter</kbd> runs it.</p>
-    <button id="cfgBtn" class="btn small" aria-expanded="false">Edit rule_config</button>
-  </div>
-  <div>
-    <div id="cfgPanel" class="hidden">
-      <div class="row"><p>The 8 rows of <code class="mono">rule_config</code>: six rules plus two helper parameters. Change one and the verdict changes, like <code class="mono">UPDATE rule_config SET threshold_value = ...</code> with no redeploy.</p><button id="cfgReset" class="link">reset defaults</button></div>
-      <div id="cfg"></div>
-    </div>
+<main class="max-w-6xl mx-auto px-4 pb-16 space-y-8">
 
-    <div id="personas"></div>
-
-    <div class="scn">
+  <section id="lab" class="glass p-5 sm:p-6">
+    <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <div class="row"><h3 id="scTitle"></h3><span id="scTag" class="tag"></span></div>
-        <p id="scDesc" class="desc"></p>
-        <div class="ctrls">
-          <label><div class="lab"><span>Amount</span><b id="vAmount"></b></div><input id="inAmount" type="range" min="0" max="100"></label>
-          <label><div class="lab"><span>Minutes since last txn</span><b id="vGap"></b></div><input id="inGap" type="range" min="0" max="100"></label>
-          <label><div class="lab"><span>Time of day</span><b id="vHour"></b></div><input id="inHour" type="range" min="0" max="23"></label>
-          <label><div class="lab"><span>Payments in the window</span><b id="vRecent"></b></div><input id="inRecent" type="range" min="1" max="9"></label>
-          <label><div class="lab"><span>Location</span></div><select id="inCity"></select></label>
-          <label><div class="lab"><span>Merchant history</span></div>
-            <select id="inMerch"><option value="clean">Chai Point: 210 txns, 0 alerts</option><option value="risky">Quick Wallet: 12 txns, 5 alerts</option></select></label>
-          <label class="full"><input id="inNewDev" type="checkbox">Unrecognised device <span class="mut">(not in <span class="mono">account_devices</span>)</span></label>
-        </div>
-        <div class="live-h">Live verdict</div>
-        <div id="chips"></div>
+        <h2 class="text-xl font-bold text-white">1 · Choose a transaction</h2>
+        <p class="text-sm text-slate-400">Pick a persona, then bend it: every slider re-evaluates the six rules instantly. Keys <span class="mono">1–4</span> pick a persona, <span class="mono">Enter</span> simulates.</p>
       </div>
+      <button id="cfgBtn" class="btn text-xs border border-slate-600 rounded-lg px-3 py-1.5 hover:border-sky-400 hover:text-sky-300">⚙ rule_config thresholds</button>
+    </div>
+
+    <div id="cfgPanel" class="hidden mt-4 rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+      <div class="flex items-center justify-between mb-2"><span class="text-sm text-slate-300">The 8 rows of rule_config (6 rules, 2 of them helper parameters). Edit a threshold and watch the verdict change. This mirrors <span class="mono">UPDATE rule_config SET threshold_value = …</span>: no code redeploy.</span><button id="cfgReset" class="text-xs text-sky-400 hover:underline">reset defaults</button></div>
+      <div id="cfg" class="grid sm:grid-cols-3 gap-3 text-xs"></div>
+    </div>
+
+    <div id="personas" class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+
+    <div class="mt-5 grid lg:grid-cols-5 gap-5">
+      <div class="lg:col-span-3 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+        <div class="flex items-center justify-between"><h3 class="font-semibold text-white" id="scTitle"></h3><span id="scTag" class="text-[11px] mono px-2 py-0.5 rounded-full border border-slate-600 text-slate-400"></span></div>
+        <p id="scDesc" class="text-sm text-slate-400 mt-1"></p>
+        <div class="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+          <label class="block"><div class="flex justify-between"><span>Amount</span><b id="vAmount" class="mono text-white"></b></div><input id="inAmount" type="range" min="0" max="100"></label>
+          <label class="block"><div class="flex justify-between"><span>Minutes since previous txn</span><b id="vGap" class="mono text-white"></b></div><input id="inGap" type="range" min="0" max="100"></label>
+          <label class="block"><div class="flex justify-between"><span>Time of day</span><b id="vHour" class="mono text-white"></b></div><input id="inHour" type="range" min="0" max="23"></label>
+          <label class="block"><div class="flex justify-between"><span>Payments in the last window</span><b id="vRecent" class="mono text-white"></b></div><input id="inRecent" type="range" min="1" max="9"></label>
+          <label class="block"><span>Location</span>
+            <select id="inCity" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 mono text-slate-100"></select></label>
+          <label class="block"><span>Merchant history</span>
+            <select id="inMerch" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 mono text-slate-100">
+              <option value="clean">Chai Point · 210 txns, 0 alerts</option>
+              <option value="risky">Quick Wallet · 12 txns, 5 alerts</option>
+            </select></label>
+          <label class="flex items-center gap-2 sm:col-span-2 cursor-pointer select-none"><input id="inNewDev" type="checkbox" class="h-4 w-4 accent-sky-400"> <span>Unrecognised device <span class="text-slate-500">(not in <span class="mono">account_devices</span>)</span></span></label>
+        </div>
+        <div class="mt-4">
+          <div class="text-xs text-slate-500 mb-1">Live verdict (updates as you drag)</div>
+          <div id="chips" class="flex flex-wrap gap-2 text-xs"></div>
+        </div>
+      </div>
+      <div class="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-950/50 p-4 flex flex-col">
+        <div class="flex items-center justify-between text-sm"><span class="font-semibold text-white">Where did the card move?</span><span id="geoInfo" class="mono text-xs text-slate-400"></span></div>
+        <svg id="map" viewBox="0 0 360 190" class="mt-2 w-full rounded-lg bg-[#050a14] border border-slate-800"></svg>
+        <div id="speedo" class="mt-3 text-xs text-slate-400"></div>
+        <div class="mt-auto pt-4 flex flex-wrap items-center gap-3">
+          <button id="go" class="btn btn-go rounded-xl px-5 py-2.5 font-semibold">▶ Simulate transaction</button>
+          <label class="text-xs text-slate-400 flex items-center gap-1.5">speed
+            <select id="speed" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-1 mono text-slate-200"><option value="1.7">slow</option><option value="1" selected>normal</option><option value="0.45">fast</option></select></label>
+          <label class="text-xs text-slate-400 flex items-center gap-1.5 cursor-pointer"><input id="stepMode" type="checkbox" class="accent-sky-400"> step by step</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pipe" class="glass p-5 sm:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <div class="row"><b>Where did the card move?</b><span id="geoInfo" class="mono mut" style="font-size:.76rem"></span></div>
-        <svg id="map" viewBox="0 0 360 190" role="img" aria-label="Map of the previous and current transaction locations"></svg>
-        <div id="speedo"></div>
-        <div class="actions">
-          <button id="go" class="btn go">Run the insert</button>
-          <label>speed <select id="speed"><option value="1.7">slow</option><option value="1" selected>normal</option><option value="0.45">fast</option></select></label>
-          <label><input id="stepMode" type="checkbox">step by step</label>
-        </div>
+        <h2 class="text-xl font-bold text-white">2 · Inside the engine</h2>
+        <p class="text-sm text-slate-400">Five stages, all inside one <span class="mono">INSERT</span>. Nothing leaves the database server.</p>
       </div>
+      <button id="next" class="btn hidden text-sm rounded-lg px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white ring">Next stage →</button>
     </div>
-  </div>
-</div></section>
 
-<section id="pipe" class="sec"><div class="wrap sgrid">
-  <div class="side">
-    <h2>Inside the engine</h2>
-    <p>Five stages inside one <code class="mono">INSERT</code>. Nothing leaves the database server.</p>
-    <button id="next" class="btn small go hidden">Next stage</button>
-  </div>
-  <div>
-    <div class="trackwrap">
-      <div class="track"><i id="fill"></i></div>
-      <div id="packet" class="packet"></div>
-      <div id="nodes" class="nodes"></div>
+    <div class="mt-6 px-2">
+      <div class="relative">
+        <div class="track mt-[22px]"><div id="fill" class="fill"></div></div>
+        <div id="packet" class="packet"></div>
+        <div id="nodes" class="absolute inset-x-0 top-0 flex justify-between"></div>
+      </div>
+      <div class="h-[74px]"></div>
     </div>
-    <div class="spacer"></div>
 
-    <div class="stages">
-      <div id="s1" class="stage">
-        <h3>Ingestion<span>a client writes one row</span></h3>
-        <div id="c1" class="console"></div>
-        <div id="r1"></div>
+    <div class="space-y-4 mt-1">
+      <div id="s1" class="step glass p-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-white"><span class="mono text-sky-300">01</span> Ingestion <span class="text-slate-500 font-normal">· a client writes one row</span></div>
+        <div id="c1" class="console mono mt-3"></div>
+        <div id="r1" class="mt-3 min-h-[46px]"></div>
       </div>
 
-      <div id="s2" class="stage">
-        <h3>Trigger fires<span>the engine, not the client, makes the next call</span></h3>
-        <div class="two">
-          <div id="c2" class="console"></div>
-          <div id="trigBadge"><b id="trigIcon">trg_after_txn_insert</b><span>AFTER INSERT, FOR EACH ROW</span></div>
-        </div>
-      </div>
-
-      <div id="s3" class="stage">
-        <h3>Rule evaluation<span><code>score_transaction()</code> checks six rules against <code>rule_config</code></span></h3>
-        <div id="rules"></div>
-      </div>
-
-      <div id="s4" class="stage">
-        <h3>Score and decision<span>each hit adds 1, any score above 0 raises an alert</span></h3>
-        <div class="score">
-          <div>
-            <div class="big"><b id="gnum">0</b><span>of 6 rules fired</span></div>
-            <div id="cells" class="cells"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          </div>
-          <div>
-            <div id="verdict">Waiting for the rules</div>
-            <div id="verdictSub"></div>
+      <div id="s2" class="step glass p-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-white"><span class="mono text-sky-300">02</span> Trigger activation <span class="text-slate-500 font-normal">· the engine, not the client, makes the next call</span></div>
+        <div class="grid md:grid-cols-5 gap-3 mt-3 items-stretch">
+          <div id="c2" class="console mono md:col-span-3"></div>
+          <div class="md:col-span-2 flex items-center justify-center rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center">
+            <div id="trigBadge" class="opacity-30 transition-all duration-500">
+              <div class="mx-auto h-12 w-12 rounded-full bg-violet-600/30 border border-violet-400 flex items-center justify-center text-xl" id="trigIcon">⚡</div>
+              <div class="mono text-xs text-violet-200 mt-2">trg_after_txn_insert</div>
+              <div class="text-[11px] text-slate-500">AFTER INSERT · FOR EACH ROW</div>
+            </div>
           </div>
         </div>
-        <div id="c4" class="console"></div>
       </div>
 
-      <div id="s5" class="stage">
-        <h3>Alert log<span>the row an analyst sees in <code>v_active_alerts</code></span></h3>
-        <div id="out5"></div>
+      <div id="s3" class="step glass p-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-white"><span class="mono text-sky-300">03</span> Rule evaluation <span class="text-slate-500 font-normal">· <span class="mono">score_transaction()</span> checks six rules against <span class="mono">rule_config</span></span></div>
+        <div id="rules" class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+      </div>
+
+      <div id="s4" class="step glass p-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-white"><span class="mono text-sky-300">04</span> Score and decision <span class="text-slate-500 font-normal">· each hit adds 1; any score above 0 raises an alert</span></div>
+        <div class="grid sm:grid-cols-2 gap-4 mt-3 items-center">
+          <div class="relative mx-auto w-[260px]">
+            <svg viewBox="0 0 200 118" class="w-full">
+              <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#1e293b" stroke-width="16" stroke-linecap="round"/>
+              <path id="garc" class="gauge-arc" d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#34d399" stroke-width="16" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+            </svg>
+            <div class="absolute inset-x-0 bottom-0 text-center">
+              <div class="text-4xl font-extrabold text-white mono leading-none"><span id="gnum">0</span><span class="text-lg text-slate-500"> / 6</span></div>
+              <div class="text-[11px] text-slate-500">rules fired</div>
+            </div>
+          </div>
+          <div>
+            <div id="verdict" class="text-lg font-bold text-slate-300">—</div>
+            <div id="verdictSub" class="text-sm text-slate-400 mt-1"></div>
+            <div id="c4" class="console mono mt-3 text-[.72rem]"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="s5" class="step glass p-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-white"><span class="mono text-sky-300">05</span> Alert log <span class="text-slate-500 font-normal">· the row the analyst will see in <span class="mono">v_active_alerts</span></span></div>
+        <div id="out5" class="mt-3"></div>
       </div>
     </div>
-  </div>
-</div></section>
+  </section>
 
-<section id="arch" class="sec"><div class="wrap sgrid">
-  <div class="side">
-    <h2>Schema map</h2>
-    <p>Hover a box for its columns, click one to replay the flow. Dashed boxes are code that runs without anyone calling it.</p>
-    <button id="playFlow" class="btn small">Replay data flow</button>
-  </div>
-  <div style="position:relative">
-    <div class="scroll-x"><svg id="arch-svg" viewBox="0 0 1000 430" role="img" aria-label="Architecture of the Sentinel tables, trigger and procedures"></svg></div>
-    <div id="tip"></div>
-    <div class="facts">
-      <div><b>Atomic</b>The trigger runs inside the INSERT's own transaction. No scored row without its alert, and a scoring error rolls the insert back.</div>
-      <div><b>Tunable</b>Thresholds are rows in <span class="mono">rule_config</span>. The procedure reads them on every call.</div>
-      <div><b>Explainable</b>Each rule that fires appends its own text to the JSON <span class="mono">reasons</span> array.</div>
+  <section id="arch" class="glass p-5 sm:p-6 relative">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-white">3 · Architecture</h2>
+        <p class="text-sm text-slate-400">Hover a box for its columns, click one to replay the flow. Violet marks the code that runs without anyone calling it.</p>
+      </div>
+      <button id="playFlow" class="btn text-sm rounded-lg px-4 py-2 border border-violet-500/60 text-violet-200 hover:bg-violet-500/10">▶ Replay data flow</button>
     </div>
-  </div>
-</div></section>
+    <div class="mt-4 overflow-x-auto"><svg id="arch-svg" viewBox="0 0 1000 430" class="w-full min-w-[720px]"></svg></div>
+    <div id="tip" class="glass p-3 text-xs"></div>
+    <ul class="mt-4 grid sm:grid-cols-3 gap-3 text-sm text-slate-400">
+      <li><b class="text-slate-200">Atomic.</b> The trigger runs inside the INSERT's own transaction: no scored transaction without its alert, and a scoring error rolls back the insert.</li>
+      <li><b class="text-slate-200">Tunable.</b> Thresholds are rows in <span class="mono">rule_config</span>; the procedure reads them on every call.</li>
+      <li><b class="text-slate-200">Explainable.</b> Each rule that fires appends its own text to the JSON <span class="mono">reasons</span> array.</li>
+    </ul>
+  </section>
 </main>
 
-<footer><div class="wrap">
-  <p>CS/AI/AIM/DS 202 Database Management Systems, IcfaiTech.</p>
-  <p>This page re-implements the rule logic of <span class="mono">score_transaction()</span> in JavaScript so it can be shown. It does not connect to a database. The account baseline (64 prior transactions, mean 1,180 rupees, sd 720), the hour profile, ids and merchant histories are illustrative.</p>
-</div></footer>
-<div id="toast" role="status" aria-live="polite"></div>
+<footer class="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500 space-y-1">
+  <div>Sentinel · Sai Haresh Anand S &amp; Dulam Seshivardhini · CS/AI/AIM/DS 202 DBMS, IcfaiTech.</div>
+  <div>This page re-implements the rule logic of <span class="mono">score_transaction()</span> in JavaScript to illustrate it. It does not connect to the database. The account baseline (64 prior transactions, mean ₹1,180, sd ₹720), the hour-of-day profile, ids and the merchant histories are illustrative.</div>
+</footer>
+<div id="toast" class="toast glass px-4 py-2 text-sm"></div>
 
 <script>
 /* ============================================================ ENGINE-START */
@@ -450,49 +316,49 @@ function evaluate(S) {
   const out = [];
   const zs = zscore(S.amount);
   const hasHist = zs.n >= 5 && zs.sd > 0;
-  out.push({ key: 'zscore', name: 'Amount z-score', view: 'rule_zscore', val: zs.z, lim: cfg.zscore,
-    detail: `n=${zs.n}, avg ${inr(zs.mean)}, sd ${inr(zs.sd)}, z = ${zs.z.toFixed(2)} (limit ${cfg.zscore})`,
+  out.push({ key: 'zscore', icon: '📈', name: 'Amount z-score', view: 'rule_zscore', val: zs.z, lim: cfg.zscore,
+    detail: `n=${zs.n} · avg ${inr(zs.mean)} · sd ${inr(zs.sd)} → z = ${zs.z.toFixed(2)} (limit ${cfg.zscore})`,
     hit: hasHist && zs.z > cfg.zscore, reason: `High amount (z=${zs.z.toFixed(2)})` });
 
   const hs = hourShare(S.hour);
-  out.push({ key: 'off_hours', name: 'Off-hours', view: 'rule_off_hours', val: hs, lim: cfg.off_hours,
+  out.push({ key: 'off_hours', icon: '🌙', name: 'Off-hours', view: 'rule_off_hours', val: hs, lim: cfg.off_hours,
     detail: `${String(S.hour).padStart(2, '0')}:00 is ${(hs * 100).toFixed(1)}% of history (limit ${(cfg.off_hours * 100).toFixed(1)}%)`,
     hit: hs < cfg.off_hours, reason: `Off-hours (${S.hour}:00, only ${(hs * 100).toFixed(2)}% of history)` });
 
-  out.push({ key: 'new_device', name: 'New device', view: 'rule_new_device',
+  out.push({ key: 'new_device', icon: '📱', name: 'New device', view: 'rule_new_device',
     detail: S.newDev ? 'device missing from account_devices' : 'device found in account_devices',
     hit: !!S.newDev, reason: 'New device (a91f03c2...)' });
 
-  out.push({ key: 'velocity', name: 'Frequency velocity', view: 'rule_velocity', val: S.recent, lim: cfg.velocity,
+  out.push({ key: 'velocity', icon: '⚡', name: 'Frequency velocity', view: 'rule_velocity', val: S.recent, lim: cfg.velocity,
     detail: `${S.recent} txn${S.recent === 1 ? '' : 's'} in ${cfg.velocity_window} min incl. this one (limit ${cfg.velocity})`,
     hit: S.recent > cfg.velocity, reason: `Velocity spike (${S.recent} in ${cfg.velocity_window} min)` });
 
   const city = CITIES[S.city], km = haversine(HOME, city), hrs = S.gap / 60, speed = hrs > 0 ? km / hrs : 0;
-  out.push({ key: 'impossible_travel', name: 'Impossible travel', view: 'rule_impossible_travel', val: speed, lim: cfg.impossible_travel,
-    detail: `${HOME.name} to ${city.name}: ${km.toFixed(1)} km in ${S.gap} min = ${Math.round(speed).toLocaleString('en-IN')} km/h (limit ${cfg.impossible_travel})`,
+  out.push({ key: 'impossible_travel', icon: '✈️', name: 'Impossible travel', view: 'rule_impossible_travel', val: speed, lim: cfg.impossible_travel,
+    detail: `${HOME.name} → ${city.name}: ${km.toFixed(1)} km in ${S.gap} min = ${Math.round(speed).toLocaleString('en-IN')} km/h (limit ${cfg.impossible_travel})`,
     hit: hrs > 0 && km > 50 && speed > cfg.impossible_travel, reason: `Impossible travel (${km.toFixed(2)} km in ${S.gap} min)` });
 
   const m = MERCHANTS[S.merch], ratio = m.alerts > 0 ? (m.alerts / m.total) / (PLATFORM.alerts / PLATFORM.txns) : 0;
   const eligible = m.total >= 3 && m.alerts >= cfg.merchant_risk_min_alerts;
-  out.push({ key: 'merchant_risk', name: 'Merchant risk', view: 'rule_merchant_risk', val: ratio, lim: cfg.merchant_risk,
-    detail: eligible ? `${m.name}: alert rate ${(100 * m.alerts / m.total).toFixed(0)}% = ${ratio.toFixed(1)}x platform (limit ${cfg.merchant_risk}x)`
-                     : `${m.name} has ${m.alerts} alert${m.alerts === 1 ? '' : 's'}; needs at least ${cfg.merchant_risk_min_alerts} before it is judged`,
+  out.push({ key: 'merchant_risk', icon: '🏪', name: 'Merchant risk', view: 'rule_merchant_risk', val: ratio, lim: cfg.merchant_risk,
+    detail: eligible ? `${m.name}: alert rate ${(100 * m.alerts / m.total).toFixed(0)}% = ${ratio.toFixed(1)}× platform (limit ${cfg.merchant_risk}×)`
+                     : `${m.name} has ${m.alerts} alert${m.alerts === 1 ? '' : 's'}; needs ≥ ${cfg.merchant_risk_min_alerts} before it is judged`,
     hit: eligible && ratio > cfg.merchant_risk, skipped: !eligible, reason: `Merchant risk (${ratio.toFixed(2)}x platform average)` });
   return out;
 }
 /* ============================================================ ENGINE-END */
 
 const PERSONAS = [
-  { id: 'normal', title: 'Normal transaction', tag: 'expect: no alert',
-    desc: 'A 150 rupee coffee from a known device, in Hyderabad, at 10 am.',
+  { id: 'normal', icon: '☕', title: 'Normal transaction', tag: 'expect: no alert',
+    desc: 'A ₹150 coffee from a known device, in Hyderabad, at 10 am.',
     S: { amount: 150, gap: 95, hour: 10, recent: 1, city: 'hyd', newDev: false, merch: 'clean' } },
-  { id: 'z', title: 'Amount z-score', tag: 'expect: high amount',
-    desc: 'A sudden 95,000 rupee electronics purchase on an account that averages about 1,180.',
+  { id: 'z', icon: '💻', title: 'Amount z-score', tag: 'expect: high amount',
+    desc: 'A sudden ₹95,000 electronics purchase on an account that averages about ₹1,180.',
     S: { amount: 95000, gap: 245, hour: 14, recent: 1, city: 'hyd', newDev: false, merch: 'clean' } },
-  { id: 'travel', title: 'Impossible travel', tag: 'expect: travel',
+  { id: 'travel', icon: '✈️', title: 'Impossible travel', tag: 'expect: travel',
     desc: 'A payment in Tokyo 15 minutes after one in Hyderabad. About 6,300 km in a quarter of an hour.',
     S: { amount: 1800, gap: 15, hour: 11, recent: 2, city: 'tok', newDev: false, merch: 'clean' } },
-  { id: 'vel', title: 'High-velocity burst', tag: 'expect: velocity',
+  { id: 'vel', icon: '🚀', title: 'High-velocity burst', tag: 'expect: velocity',
     desc: 'Six payments inside two minutes at different merchants. The sixth insert tips the rule.',
     S: { amount: 905, gap: 1, hour: 16, recent: 6, city: 'hyd', newDev: false, merch: 'clean' } }
 ];
@@ -538,20 +404,46 @@ function countUp(el, to, ms) {
   (function f(t) {
     const k = Math.max(0, Math.min(1, (t - t0) / ms)), e = 1 - Math.pow(1 - k, 3);
     el.textContent = Math.round(to * e).toLocaleString('en-IN');
-    if (k < 1) requestAnimationFrame(f);
+    if (k < 1 && !RM) requestAnimationFrame(f);
   })(t0);
 }
-document.querySelectorAll('#stats [data-n]').forEach(el => countUp(el, Number(el.dataset.n), 1200));
+
+/* ============================================================ background particles */
+(function bg() {
+  const c = $('#bg'), x = c.getContext('2d'); let w, h, pts = [];
+  function size() { w = c.width = innerWidth; h = c.height = innerHeight; pts = Array.from({ length: Math.min(70, Math.floor(w * h / 22000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 })); }
+  size(); addEventListener('resize', size);
+  const mouse = { x: -999, y: -999 }; addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  function frame() {
+    x.clearRect(0, 0, w, h);
+    for (const p of pts) {
+      if (!RM) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1; }
+      x.fillStyle = 'rgba(125,211,252,.7)'; x.beginPath(); x.arc(p.x, p.y, 1.4, 0, 7); x.fill();
+    }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 130) { x.strokeStyle = `rgba(99,102,241,${.22 * (1 - d / 130)})`; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); }
+    }
+    for (const p of pts) { const d = Math.hypot(p.x - mouse.x, p.y - mouse.y); if (d < 160) { x.strokeStyle = `rgba(56,189,248,${.5 * (1 - d / 160)})`; x.beginPath(); x.moveTo(p.x, p.y); x.lineTo(mouse.x, mouse.y); x.stroke(); } }
+    if (!RM && !document.hidden) requestAnimationFrame(frame);
+  }
+  frame(); document.addEventListener('visibilitychange', () => { if (!document.hidden && !RM) frame(); });
+})();
+
+document.querySelectorAll('#stats [data-n]').forEach(el => countUp(el, Number(el.dataset.n), 1400));
 
 /* ============================================================ persona + controls */
 function renderPersonas() {
   $('#personas').innerHTML = PERSONAS.map((p, i) => `
-    <button data-i="${i}" class="persona ${p === cur ? 'sel' : ''}" aria-pressed="${p === cur}">
-      <span class="n">0${i + 1}</span>
-      <b>${p.title}</b>
-      <span class="t">${p.tag}</span>
+    <button data-i="${i}" class="persona text-left rounded-xl border border-slate-700 bg-slate-900/70 p-3 ${p === cur ? 'sel' : ''}">
+      <div class="flex items-center justify-between"><span class="ico text-2xl">${p.icon}</span><span class="mono text-[10px] text-slate-500">${i + 1}</span></div>
+      <div class="font-semibold text-white mt-1">${p.title}</div>
+      <div class="text-xs text-slate-400">${p.tag}</div>
     </button>`).join('');
-  document.querySelectorAll('.persona').forEach(b => { b.onclick = () => pick(PERSONAS[b.dataset.i]); });
+  document.querySelectorAll('.persona').forEach(b => {
+    b.onclick = () => pick(PERSONAS[b.dataset.i]);
+    b.onpointermove = e => { const r = b.getBoundingClientRect(); b.style.setProperty('--mx', (e.clientX - r.left) + 'px'); b.style.setProperty('--my', (e.clientY - r.top) + 'px'); };
+  });
 }
 function pick(p) {
   if (running) return;
@@ -569,18 +461,19 @@ function readControls() {
 function updateAll() {
   $('#vAmount').textContent = inr(S.amount); $('#vGap').textContent = S.gap + ' min'; $('#vHour').textContent = String(S.hour).padStart(2, '0') + ':00'; $('#vRecent').textContent = S.recent;
   const res = evaluate(S);
-  $('#chips').innerHTML = res.map(r => `<span class="chip ${r.skipped ? 'skip' : r.hit ? 'hit' : 'miss'}" title="${esc(r.detail)}">${r.name}${r.hit ? ': fires' : ''}</span>`).join('');
+  $('#chips').innerHTML = res.map(r => `<span class="chip border rounded-full px-2.5 py-1 ${r.skipped ? 'skip' : r.hit ? 'hit' : 'miss'}" title="${esc(r.detail)}">${r.icon} ${r.name}${r.hit ? ' · FIRES' : ''}</span>`).join('');
   drawMap(res.find(r => r.key === 'impossible_travel'));
 }
 ['inAmount', 'inGap', 'inHour', 'inRecent', 'inCity', 'inMerch', 'inNewDev'].forEach(id => $('#' + id).addEventListener('input', () => { if (running) return; readControls(); updateAll(); resetPipeline(); }));
 $('#inCity').innerHTML = Object.entries(CITIES).map(([k, c]) => `<option value="${k}">${c.name}</option>`).join('');
 
-const CFG_LABELS = { zscore: 'zscore', off_hours: 'off_hours (share)', velocity: 'velocity (count)', velocity_window: 'velocity_window (min)', impossible_travel: 'impossible_travel (km/h)', merchant_risk: 'merchant_risk (x)', new_device: 'new_device (flag)', merchant_risk_min_alerts: 'merchant_risk_min_alerts' };
+const CFG_LABELS = { zscore: 'zscore', off_hours: 'off_hours (share)', velocity: 'velocity (count)', velocity_window: 'velocity_window (min)', impossible_travel: 'impossible_travel (km/h)', merchant_risk: 'merchant_risk (×)', new_device: 'new_device (flag)', merchant_risk_min_alerts: 'merchant_risk_min_alerts' };
 function renderCfg() {
-  $('#cfg').innerHTML = Object.keys(DEFAULT_CFG).map(k => `<label><span class="mono mut">${CFG_LABELS[k]}</span><input data-k="${k}" type="number" step="any" value="${cfg[k]}"></label>`).join('');
+  $('#cfg').innerHTML = Object.keys(DEFAULT_CFG).map(k => `<label class="flex items-center justify-between gap-2"><span class="mono text-slate-400">${CFG_LABELS[k]}</span>
+    <input data-k="${k}" type="number" step="any" value="${cfg[k]}" class="w-24 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-right mono text-slate-100"></label>`).join('');
   document.querySelectorAll('#cfg input').forEach(i => i.oninput = () => { const v = parseFloat(i.value); if (!isNaN(v)) { cfg[i.dataset.k] = v; updateAll(); } });
 }
-$('#cfgBtn').onclick = () => { const p = $('#cfgPanel'); p.classList.toggle('hidden'); $('#cfgBtn').setAttribute('aria-expanded', !p.classList.contains('hidden')); };
+$('#cfgBtn').onclick = () => $('#cfgPanel').classList.toggle('hidden');
 $('#cfgReset').onclick = () => { cfg = { ...DEFAULT_CFG }; renderCfg(); updateAll(); toast('rule_config reset to defaults'); };
 
 /* ============================================================ map */
@@ -588,50 +481,49 @@ function drawMap(travel) {
   const W = 360, H = 190, P = c => [(c.lon + 180) / 360 * W, (90 - c.lat) / 180 * H];
   const a = P(HOME), city = CITIES[S.city], b = P(city);
   let g = '';
-  for (let lon = -150; lon <= 150; lon += 30) { const x = (lon + 180) / 360 * W; g += `<line class="g" x1="${x}" y1="0" x2="${x}" y2="${H}"/>`; }
-  for (let lat = -60; lat <= 60; lat += 30) { const y = (90 - lat) / 180 * H; g += `<line class="g" x1="0" y1="${y}" x2="${W}" y2="${y}"/>`; }
-  Object.values(CITIES).forEach(c => { if (c === HOME || c === city) return; const [x, y] = P(c); g += `<circle class="city" cx="${x}" cy="${y}" r="2"/><text class="lbl" x="${Math.min(x + 5, W - 44)}" y="${y - 4}">${c.name}</text>`; });
+  for (let lon = -150; lon <= 150; lon += 30) { const x = (lon + 180) / 360 * W; g += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#0f1b30"/>`; }
+  for (let lat = -60; lat <= 60; lat += 30) { const y = (90 - lat) / 180 * H; g += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#0f1b30"/>`; }
+  Object.values(CITIES).forEach(c => { const [x, y] = P(c); g += `<circle cx="${x}" cy="${y}" r="2" fill="#334155"/>`; });
   const same = city === HOME, mx = (a[0] + b[0]) / 2, my = Math.min(a[1], b[1]) - Math.max(14, Math.hypot(a[0] - b[0], a[1] - b[1]) * .28);
-  const bad = travel && travel.hit, cls = bad ? ' bad' : '';
+  const bad = travel && travel.hit, col = bad ? '#fb7185' : '#38bdf8';
   const len = same ? 0 : Math.hypot(a[0] - b[0], a[1] - b[1]) * 1.25 + 10;
-  if (!same) g += `<path id="arc" class="arcline${cls}" style="--len:${len}" d="M${a[0]} ${a[1]} Q${mx} ${my} ${b[0]} ${b[1]}"/>`;
-  g += `<rect class="home" x="${a[0] - 4}" y="${a[1] - 4}" width="8" height="8"/><text class="home-l" text-anchor="end" x="${a[0] + 6}" y="${a[1] + 16}">${HOME.name} (previous)</text>`;
-  if (!same) g += `<rect class="to${cls}" x="${b[0] - 4}" y="${b[1] - 4}" width="8" height="8" transform="rotate(45 ${b[0]} ${b[1]})"/><text class="to-l${cls}" x="${Math.min(b[0] + 8, W - 56)}" y="${b[1] - 8}">${city.name}</text>`;
+  if (!same) g += `<path id="arc" class="arc" style="--len:${len}" d="M${a[0]} ${a[1]} Q${mx} ${my} ${b[0]} ${b[1]}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`;
+  g += `<circle cx="${a[0]}" cy="${a[1]}" r="5" fill="#0ea5e9"><animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/></circle><text x="${a[0] + 8}" y="${a[1] + 14}" fill="#7dd3fc" font-size="9">${HOME.name} (previous)</text>`;
+  if (!same) g += `<circle cx="${b[0]}" cy="${b[1]}" r="5" fill="${col}"><animate attributeName="r" values="5;9;5" dur="1.4s" repeatCount="indefinite"/></circle><text x="${Math.min(b[0] + 8, W - 50)}" y="${b[1] - 8}" fill="${col}" font-size="9">${city.name}</text>`;
   $('#map').innerHTML = g;
   const arc = $('#arc'); if (arc) requestAnimationFrame(() => requestAnimationFrame(() => arc.classList.add('draw')));
   const km = haversine(HOME, city);
   $('#geoInfo').textContent = same ? 'same city' : `${km.toFixed(0)} km`;
   const sp = travel ? travel.val : 0;
-  $('#speedo').innerHTML = same ? 'Staying in one place, so the speed rule has nothing to measure.'
-    : `Implied speed <b class="${bad ? 'bad' : ''}">${Math.round(sp).toLocaleString('en-IN')} km/h</b> against a limit of <span class="mono">${cfg.impossible_travel}</span>` +
-      `<div class="bar2"><i class="${bad ? 'bad' : ''}" style="width:${Math.min(100, sp / (cfg.impossible_travel * 2) * 100)}%"></i></div>`;
+  $('#speedo').innerHTML = same ? 'Staying in one place: the speed rule has nothing to measure.'
+    : `Implied speed <b class="mono ${bad ? 'text-rose-300' : 'text-sky-300'}">${Math.round(sp).toLocaleString('en-IN')} km/h</b> vs limit <span class="mono">${cfg.impossible_travel}</span>` +
+      `<div class="mt-1 h-1.5 rounded bg-slate-800 overflow-hidden"><div class="h-full rounded transition-all duration-700" style="width:${Math.min(100, sp / (cfg.impossible_travel * 2) * 100)}%;background:${bad ? '#fb7185' : '#38bdf8'}"></div></div>`;
 }
 
 /* ============================================================ pipeline */
-const NODES = [['INSERT', 'client'], ['Trigger', 'AFTER INSERT'], ['Rules', 'score_transaction'], ['Score', 'decision'], ['Alert', 'alerts row']];
+const NODES = [['01', 'INSERT', 'client'], ['02', 'Trigger', 'AFTER INSERT'], ['03', 'Rules', 'score_transaction'], ['04', 'Score', 'decision'], ['05', 'Alert', 'alerts row']];
 function drawNodes() {
-  $('#nodes').innerHTML = NODES.map((n, i) => `<div class="pnode" data-i="${i}"><div class="dot"></div><b>${n[0]}</b><span>${n[1]}</span></div>`).join('');
+  $('#nodes').innerHTML = NODES.map((n, i) => `<div class="pnode flex flex-col items-center w-24 text-center" data-i="${i}">
+    <div class="dot h-11 w-11 rounded-full border-2 border-slate-600 bg-slate-900 flex items-center justify-center mono text-sm text-slate-400">${n[0]}</div>
+    <div class="mt-2 text-xs font-semibold text-slate-200">${n[1]}</div><div class="text-[10px] mono text-slate-500">${n[2]}</div></div>`).join('');
 }
 const nodeEl = i => document.querySelector(`.pnode[data-i="${i}"]`);
 function movePacket(i, bad) {
   const box = $('#nodes').getBoundingClientRect(), r = nodeEl(i).querySelector('.dot').getBoundingClientRect();
-  const x = r.left + r.width / 2 - box.left + 4;
-  $('#packet').style.left = x + 'px'; $('#packet').classList.add('show');
-  $('#fill').style.width = (x - 4) + 'px';
+  const x = r.left + r.width / 2 - box.left;
+  $('#packet').style.left = x + 'px'; $('#packet').classList.add('show'); $('#packet').classList.toggle('bad', !!bad);
+  $('#fill').style.width = x + 'px';
 }
 function setNode(i, state) { const n = nodeEl(i); n.classList.remove('on', 'done', 'alert'); if (state) n.classList.add(state); }
-function setMeter(score, bad) {
-  document.querySelectorAll('#cells i').forEach((c, i) => { c.classList.toggle('on', i < score); c.classList.toggle('bad', !!bad && i < score); });
-}
 function resetPipeline() {
-  runId++; running = false; $('#go').disabled = false; $('#go').textContent = 'Run the insert'; $('#next').classList.add('hidden');
-  document.querySelectorAll('.stage').forEach(s => s.classList.remove('live', 'hot'));
+  runId++; running = false; $('#go').disabled = false; $('#go').textContent = '▶ Simulate transaction'; $('#next').classList.add('hidden');
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('live', 'pulse', 'hot'));
   for (let i = 0; i < 5; i++) setNode(i, null);
-  $('#fill').style.width = '0'; $('#packet').classList.remove('show');
+  $('#fill').style.width = '0'; $('#packet').classList.remove('show', 'bad');
   ['c1', 'c2', 'c4'].forEach(id => { $('#' + id).innerHTML = ''; $('#' + id).classList.remove('caret'); });
   $('#r1').innerHTML = ''; $('#out5').innerHTML = '';
-  $('#rules').innerHTML = ''; $('#trigBadge').classList.remove('on');
-  setMeter(0); $('#gnum').textContent = '0'; $('#verdict').textContent = 'Waiting for the rules'; $('#verdict').className = ''; $('#verdictSub').textContent = '';
+  $('#rules').innerHTML = ''; $('#trigBadge').classList.add('opacity-30'); $('#trigIcon').classList.remove('ring');
+  $('#garc').style.strokeDashoffset = 251.3; $('#gnum').textContent = '0'; $('#verdict').textContent = '—'; $('#verdict').className = 'text-lg font-bold text-slate-300'; $('#verdictSub').textContent = '';
 }
 
 let stepResolve = null;
@@ -646,31 +538,31 @@ $('#next').onclick = () => stepResolve && stepResolve();
 async function simulate() {
   if (running) return;
   resetPipeline(); running = true; const tok = ++runId;
-  $('#go').disabled = true; $('#go').textContent = 'running...';
+  $('#go').disabled = true; $('#go').textContent = 'running…';
   $('#pipe').scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' });
   try {
     const res = evaluate(S), hits = res.filter(r => r.hit), score = hits.length, city = CITIES[S.city], m = MERCHANTS[S.merch];
     const txnId = seq.txn, alertId = seq.alert, devId = S.newDev ? 9001 : 12;
     await wait(600); chk(tok);
 
-    /* ingestion */
-    setNode(0, 'on'); movePacket(0); $('#s1').classList.add('live');
+    /* 1 ingestion */
+    setNode(0, 'on'); movePacket(0); $('#s1').classList.add('live', 'pulse');
     await typeInto($('#c1'), `INSERT INTO transactions\n  (account_id, merchant_id, device_id, location_id, amount, status)\nVALUES (7, ${m.id}, ${devId}, ${city.id}, ${S.amount.toFixed(2)}, 'success');   -- ${m.name}, ${city.name}`, tok);
-    $('#r1').innerHTML = `<div class="stored drop"><b>1 row stored</b><span><em>txn_id</em> ${txnId}</span><span><em>amount</em> ${inr(S.amount)}</span><span><em>city</em> ${city.name}</span><em>scoring has not run yet</em></div>`
-      + (S.recent > 1 ? `<div class="win">window: ${Array.from({ length: S.recent }, (_, i) => `<i class="${i === S.recent - 1 ? 'now' : ''}"></i>`).join('')} <span>${S.recent} payments in ${cfg.velocity_window} min</span></div>` : '');
+    $('#r1').innerHTML = `<div class="drop-in mono text-xs rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 flex flex-wrap gap-x-5 gap-y-1"><span class="text-emerald-400">1 row stored</span><span>txn_id <b class="text-white">${txnId}</b></span><span>amount <b class="text-white">${inr(S.amount)}</b></span><span>city <b class="text-white">${city.name}</b></span><span class="text-slate-500">(stored; scoring has not run yet)</span></div>`
+      + (S.recent > 1 ? `<div class="mt-2 flex items-center gap-1 text-[11px] text-slate-500">window: ${Array.from({ length: S.recent }, (_, i) => `<span class="inline-block h-2.5 w-2.5 rounded-full ${i === S.recent - 1 ? 'bg-sky-400' : 'bg-slate-600'}"></span>`).join('')} ${S.recent} payments in ${cfg.velocity_window} min</div>` : '');
     await wait(900); chk(tok); await gate(tok);
 
-    /* trigger */
-    setNode(0, 'done'); setNode(1, 'on'); movePacket(1); $('#s2').classList.add('live');
-    $('#trigBadge').classList.add('on');
+    /* 2 trigger */
+    setNode(0, 'done'); setNode(1, 'on'); movePacket(1); $('#s2').classList.add('live', 'pulse');
+    $('#trigBadge').classList.remove('opacity-30'); $('#trigIcon').classList.add('ring');
     await typeInto($('#c2'), `CREATE TRIGGER trg_after_txn_insert\nAFTER INSERT ON transactions FOR EACH ROW\nBEGIN\n  CALL score_transaction(NEW.txn_id);   -- NEW.txn_id = ${txnId}\nEND;`, tok);
     await wait(900); chk(tok); await gate(tok);
 
-    /* rules */
-    setNode(1, 'done'); setNode(2, 'on'); movePacket(2); $('#s3').classList.add('live');
+    /* 3 rules */
+    setNode(1, 'done'); setNode(2, 'on'); movePacket(2); $('#s3').classList.add('live', 'pulse');
     $('#rules').innerHTML = res.map((r, i) => `<div class="rcard" id="rc${i}"><div class="in">
-      <div class="f"><b>${r.name}</b><span>${r.view}</span></div>
-      <div class="b"><div class="top"><span>${r.name}</span><em>${r.hit ? 'FIRES +1' : r.skipped ? 'SKIPPED' : 'clear'}</em></div><small>${esc(r.detail)}</small></div></div></div>`).join('');
+      <div class="f flex flex-col justify-between"><div class="flex items-center gap-2 text-sm text-slate-200"><span class="text-xl">${r.icon}</span>${r.name}</div><div class="mono text-[11px] text-slate-500">${r.view}</div></div>
+      <div class="b flex flex-col justify-between"><div class="flex items-center justify-between text-sm"><span class="flex items-center gap-1.5 text-slate-100"><span>${r.icon}</span>${r.name}</span><b class="${r.hit ? 'text-rose-300' : r.skipped ? 'text-slate-500' : 'text-emerald-300'} text-xs mono">${r.hit ? 'FIRES +1' : r.skipped ? 'SKIPPED' : 'clear'}</b></div><div class="text-[11px] leading-snug text-slate-400">${esc(r.detail)}</div></div></div></div>`).join('');
     await wait(350);
     for (let i = 0; i < res.length; i++) {
       chk(tok); const c = $('#rc' + i); c.classList.add('checking'); await wait(430); chk(tok);
@@ -680,38 +572,41 @@ async function simulate() {
     }
     await wait(500); chk(tok); await gate(tok);
 
-    /* score */
-    setNode(2, 'done'); setNode(3, score ? 'alert' : 'on'); movePacket(3, score); $('#s4').classList.add('live'); if (score) $('#s4').classList.add('hot');
+    /* 4 score */
+    setNode(2, 'done'); setNode(3, score ? 'alert' : 'on'); movePacket(3, score); $('#s4').classList.add('live', 'pulse'); if (score) $('#s4').classList.add('hot');
+    const arc = $('#garc'); arc.style.stroke = score === 0 ? '#34d399' : score < 3 ? '#fbbf24' : '#fb7185';
     await wait(250); chk(tok);
-    const g = $('#gnum');
-    for (let i = 1; i <= score; i++) { setMeter(i, true); g.textContent = i; await wait(220); chk(tok); }
-    $('#verdict').textContent = score ? `Score ${score}, alert raised` : 'Score 0, no alert';
-    $('#verdict').className = score ? 'bad' : '';
+    arc.style.strokeDashoffset = 251.3 * (1 - score / 6);
+    const g = $('#gnum'), t0 = performance.now(), dur = Math.max(1, 1100 * spd());
+    if (RM) g.textContent = score; else await new Promise(done => (function f(t) { const k = Math.max(0, Math.min(1, (t - t0) / dur)); g.textContent = Math.round(score * k); k < 1 ? requestAnimationFrame(f) : done(); })(t0));
+    chk(tok);
+    $('#verdict').textContent = score ? `score ${score} > 0 → RAISE ALERT` : 'score 0 → no alert';
+    $('#verdict').className = 'text-lg font-bold ' + (score ? 'text-rose-300' : 'text-emerald-300');
     $('#verdictSub').textContent = score ? `${hits.map(h => h.name).join(' + ')}. There is no combined threshold: each rule has its own, and one hit is enough.` : 'All six rules clear. Any older open alert for this transaction is deleted, so re-scoring stays consistent.';
     await typeInto($('#c4'), score
       ? `INSERT INTO alerts (txn_id, rule_name, risk_score, reasons, status)\nVALUES (${txnId}, 'combined', ${score}, JSON_ARRAY(...), 'open')\nON DUPLICATE KEY UPDATE ...;`
       : `DELETE FROM alerts WHERE txn_id = ${txnId} AND status = 'open';   -- 0 rows`, tok);
     await wait(700); chk(tok); await gate(tok);
 
-    /* alert log */
-    setNode(3, 'done'); setNode(4, score ? 'alert' : 'on'); movePacket(4, score); $('#s5').classList.add('live'); if (score) $('#s5').classList.add('hot');
+    /* 5 log */
+    setNode(3, 'done'); setNode(4, score ? 'alert' : 'on'); movePacket(4, score); $('#s5').classList.add('live', 'pulse'); if (score) $('#s5').classList.add('hot');
     if (score) {
       const reasons = JSON.stringify(hits.map(h => h.reason), null, 2);
-      $('#out5').innerHTML = `<div class="slide" style="overflow-x:auto"><table class="tbl"><thead><tr><th>alert_id</th><th>txn_id</th><th>rule_name</th><th>risk_score</th><th>status</th><th>created_at</th></tr></thead>
-        <tbody><tr class="row-hit"><td>${alertId}</td><td>${txnId}</td><td>combined</td><td>${score}.00</td><td><span class="pill">open</span></td><td>2026-10-21 ${String(S.hour).padStart(2, '0')}:30:00</td></tr></tbody></table></div>
-        <div class="note">reasons (JSON column)</div><pre id="json" class="console json"></pre>
-        <div class="note">An analyst sees this through <span class="mono">v_active_alerts</span>. Changing its status fires <span class="mono">trg_before_alert_update</span> (stamps <span class="mono">reviewed_at</span>) and <span class="mono">trg_after_alert_update</span> (writes <span class="mono">audit_log</span>).</div>`;
+      $('#out5').innerHTML = `<div class="slide-in overflow-x-auto"><table class="w-full text-xs mono"><thead class="text-slate-500 text-left"><tr><th class="pr-4 pb-1">alert_id</th><th class="pr-4">txn_id</th><th class="pr-4">rule_name</th><th class="pr-4">risk_score</th><th class="pr-4">status</th><th>created_at</th></tr></thead>
+        <tbody><tr class="text-slate-100 bg-rose-500/10"><td class="pr-4 py-1.5">${alertId}</td><td class="pr-4">${txnId}</td><td class="pr-4">combined</td><td class="pr-4 text-rose-300">${score}.00</td><td class="pr-4"><span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200">open</span></td><td>2026-10-21 ${String(S.hour).padStart(2, '0')}:30:00</td></tr></tbody></table></div>
+        <div class="mt-3 text-xs text-slate-500">reasons (JSON column)</div><pre id="json" class="console mono text-emerald-200"></pre>
+        <div class="mt-2 text-[11px] text-slate-500">An analyst sees this through <span class="mono">v_active_alerts</span>. Changing its status fires <span class="mono">trg_before_alert_update</span> (stamps <span class="mono">reviewed_at</span>) and <span class="mono">trg_after_alert_update</span> (writes <span class="mono">audit_log</span>).</div>`;
       document.body.classList.add('flash'); setTimeout(() => document.body.classList.remove('flash'), 900);
       await typeInto($('#json'), reasons, tok);
       seq.alert++;
-      toast(`Alert ${alertId} raised inside the INSERT: ${hits.length} rule${hits.length > 1 ? 's' : ''} fired`);
+      toast(`ALERT ${alertId} raised inside the INSERT: ${hits.length} rule${hits.length > 1 ? 's' : ''} fired`);
     } else {
-      $('#out5').innerHTML = `<div class="clean slide">No row written to <span class="mono">alerts</span>. Transaction ${txnId} stays clean, and the check cost one trigger call (about 2 ms).</div>`;
+      $('#out5').innerHTML = `<div class="slide-in rounded-xl border border-emerald-700/50 bg-emerald-500/5 p-4 text-sm text-emerald-200">No row written to <span class="mono">alerts</span>. Transaction ${txnId} stays clean, and the check cost one trigger call (about 2 ms).</div>`;
       toast('Clean: no alert written');
     }
     seq.txn++;
   } catch (e) { if (e !== CANCEL) throw e; return; }
-  running = false; $('#go').disabled = false; $('#go').textContent = 'Run again';
+  running = false; $('#go').disabled = false; $('#go').textContent = '↻ Simulate again';
 }
 $('#go').onclick = simulate;
 addEventListener('keydown', e => {
@@ -722,16 +617,16 @@ addEventListener('keydown', e => {
 
 /* ============================================================ architecture */
 const ENT = {
-  users: { x: 20, y: 24, w: 160, h: 74, t: 'users', sub: '500 rows', cols: 'PK user_id, full_name, email (UNIQUE), phone, created_at' },
-  accounts: { x: 250, y: 24, w: 160, h: 74, t: 'accounts', sub: '597 rows', cols: 'PK account_id, FK user_id, account_type, balance (CHECK >= 0), status' },
-  merchants: { x: 810, y: 24, w: 170, h: 74, t: 'merchants', sub: '50 rows', cols: 'PK merchant_id, merchant_name, FK category_id, city, lat/lon' },
-  transactions: { x: 420, y: 148, w: 180, h: 84, t: 'transactions', sub: '12,067 rows', cols: 'PK txn_id, FK account_id, merchant_id, device_id, location_id, amount (CHECK > 0), txn_time, status' },
-  trigger: { x: 420, y: 270, w: 180, h: 56, t: 'trg_after_txn_insert', sub: 'AFTER INSERT, each row', cols: 'CALL score_transaction(NEW.txn_id)', cls: 'hotbox' },
-  proc: { x: 640, y: 270, w: 190, h: 56, t: 'score_transaction()', sub: '6 rules, JSON reasons', cols: 'z-score, haversine_km() travel, velocity, new device, off-hours, merchant risk', cls: 'hotbox' },
-  rc: { x: 860, y: 270, w: 120, h: 56, t: 'rule_config', sub: 'thresholds as data', cols: 'rule_name (UNIQUE), enabled, threshold value, parameters' },
-  alerts: { x: 420, y: 352, w: 180, h: 56, t: 'alerts', sub: 'one per flagged txn', cls: 'alertbox', cols: 'PK alert_id, txn_id (UNIQUE, FK), rule_name, risk_score, reasons JSON, status, reviewed_at' },
-  base: { x: 130, y: 270, w: 220, h: 56, t: 'refresh_behaviour_baselines()', sub: 'nightly event, 02:30', cols: 'Rebuilds behaviour_baselines (avg, sd, peak hours, cities) in one transaction with an exit handler.' },
-  xfer: { x: 130, y: 352, w: 220, h: 56, t: 'transfer_funds()', sub: 'ACID, FOR UPDATE, lock order', cols: 'START TRANSACTION, lock lower account_id first, debit + credit + INSERT, then COMMIT or ROLLBACK' }
+  users: { x: 20, y: 24, w: 160, h: 74, t: 'users', sub: '500 rows', cols: 'PK user_id · full_name · email (UNIQUE) · phone · created_at' },
+  accounts: { x: 250, y: 24, w: 160, h: 74, t: 'accounts', sub: '597 rows', cols: 'PK account_id · FK user_id · account_type · balance (CHECK ≥ 0) · status' },
+  merchants: { x: 810, y: 24, w: 170, h: 74, t: 'merchants', sub: '50 rows', cols: 'PK merchant_id · merchant_name · FK category_id · city · lat/lon' },
+  transactions: { x: 420, y: 148, w: 180, h: 84, t: 'transactions', sub: '12,067 rows', cols: 'PK txn_id · FK account_id, merchant_id, device_id, location_id · amount (CHECK > 0) · txn_time · status' },
+  trigger: { x: 420, y: 270, w: 180, h: 56, t: 'trg_after_txn_insert', sub: 'AFTER INSERT · each row', cols: 'CALL score_transaction(NEW.txn_id)', cls: 'hotbox' },
+  proc: { x: 640, y: 270, w: 190, h: 56, t: 'score_transaction()', sub: '6 rules · JSON reasons', cols: 'z-score · haversine_km() travel · velocity · new device · off-hours · merchant risk', cls: 'hotbox' },
+  rc: { x: 860, y: 270, w: 120, h: 56, t: 'rule_config', sub: 'thresholds as data', cols: 'rule_name (UNIQUE) · enabled · threshold value · parameters' },
+  alerts: { x: 420, y: 352, w: 180, h: 56, t: 'alerts', sub: 'one per flagged txn', cls: 'alertbox', cols: 'PK alert_id · txn_id (UNIQUE, FK) · rule_name · risk_score · reasons JSON · status · reviewed_at' },
+  base: { x: 130, y: 270, w: 220, h: 56, t: 'refresh_behaviour_baselines()', sub: 'nightly event · 02:30', cols: 'Rebuilds behaviour_baselines (avg, sd, peak hours, cities) in one transaction with an exit handler.' },
+  xfer: { x: 130, y: 352, w: 220, h: 56, t: 'transfer_funds()', sub: 'ACID · FOR UPDATE · lock order', cols: 'START TRANSACTION → lock lower account_id first → debit + credit + INSERT → COMMIT / ROLLBACK' }
 };
 const EDGES = [
   ['e1', 'M180 61 L250 61', ''], ['e2', 'M330 98 C330 130 420 150 420 178', ''], ['e3', 'M895 98 C895 140 700 170 600 186', ''],
@@ -739,20 +634,20 @@ const EDGES = [
   ['e7', 'M735 326 L735 380 L600 380', 'r']
 ];
 function drawArch() {
-  let s = `<defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path class="ahp" d="M0 0 L8 4 L0 8z"/></marker></defs>`;
+  let s = `<defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#475569"/></marker></defs>`;
   s += EDGES.map(e => `<path id="${e[0]}" class="edge" d="${e[1]}" marker-end="url(#ah)" data-k="${e[2]}"/>`).join('');
   for (const [k, e] of Object.entries(ENT)) {
-    s += `<g class="ent ${e.cls || ''}" data-k="${k}"><rect class="box" x="${e.x}" y="${e.y}" width="${e.w}" height="${e.h}" rx="2"/>
-      <text class="t1" x="${e.x + 12}" y="${e.y + e.h / 2 - 2}" font-size="${e.t.length > 20 ? 12 : 14}">${e.t}</text>
-      <text class="t2" x="${e.x + 12}" y="${e.y + e.h / 2 + 16}">${e.sub}</text></g>`;
+    s += `<g class="ent ${e.cls || ''}" data-k="${k}"><rect class="box" x="${e.x}" y="${e.y}" width="${e.w}" height="${e.h}" rx="12"/>
+      <text x="${e.x + 12}" y="${e.y + e.h / 2 - 2}" fill="#e2e8f0" font-size="${e.t.length > 20 ? 12 : 14}" font-weight="600" font-family="ui-monospace,Menlo,monospace">${e.t}</text>
+      <text x="${e.x + 12}" y="${e.y + e.h / 2 + 16}" fill="#64748b" font-size="11">${e.sub}</text></g>`;
   }
-  s += `<text class="t3" x="20" y="150">Application tier: only INSERT and CALL. No scoring code here.</text>
-        <text class="t3" x="20" y="170">Everything below the transactions table runs inside MySQL.</text>`;
+  s += `<text x="20" y="150" fill="#475569" font-size="11">Application tier: only INSERT and CALL. No scoring code here.</text>
+        <text x="20" y="170" fill="#475569" font-size="11">Everything below the transactions table runs inside MySQL.</text>`;
   $('#arch-svg').innerHTML = s;
-  const tip = $('#tip'), wrap = $('#arch .wrap > div:last-child');
+  const tip = $('#tip'), wrap = $('#arch');
   document.querySelectorAll('.ent').forEach(g => {
     g.onmousemove = e => { const e2 = ENT[g.dataset.k], r = wrap.getBoundingClientRect();
-      tip.innerHTML = `<b>${e2.t}</b>${e2.cols}`; tip.classList.add('show');
+      tip.innerHTML = `<div class="mono text-sky-300 font-semibold">${e2.t}</div><div class="text-slate-300 mt-1 leading-snug">${e2.cols}</div>`; tip.classList.add('show');
       tip.style.left = Math.max(0, Math.min(e.clientX - r.left + 14, r.width - 270)) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px'; };
     g.onmouseleave = () => tip.classList.remove('show');
     g.onclick = () => playFlow();
