@@ -13,6 +13,6 @@
 | 3:15 | "Least privilege." | `bash week-09.../demo/dcl_demo.sh`: analyst denied on `transactions`, allowed on the view. |
 | 4:00 | "All-or-nothing money." | `02_transaction_demo.sql` + show the four refused transfers. |
 | 4:30 | "What it cannot do" | One limitation from `limitations.md` (say the random-city one). |
-| 4:50 | "Everything is reproducible: `make all`, 98 assertions." | Show the green run. |
+| 4:50 | "Everything is reproducible: `make all`, 102 assertions." | Show the green run. |
 
 **If something breaks:** say what you expected to happen, show the screenshot, and carry on. Calm recovery scores higher than a flawless run that looks rehearsed.

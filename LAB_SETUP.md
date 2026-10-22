@@ -22,3 +22,10 @@ Then run the demo: `week-10-procedures-triggers/demo/01_fraud_demo.sql`.
 Open `report/sentinel_project_report.pdf` for the code and captured output, and open `demo.html` in a browser (it needs internet for the Tailwind CDN). Run the live database from your own laptop with Docker: `make up && make all`.
 
 Host mode (`DB_HOST`) has not been tested on a lab machine, so try it at home first against a local MySQL install.
+
+## Easiest way: one file
+`sentinel_full_build.sql` in the repo root builds the whole database (weeks 1-10) in a single run, with no bash scripts:
+
+`mysql -u root -p --default-character-set=utf8mb4 < sentinel_full_build.sql`
+
+In Workbench use File > Open SQL Script, then run it. Tested on MySQL 8.4 (all checks pass); not tested on MariaDB or a lab PC. Afterwards `transactions` should hold 12067 rows and `alerts` 21.
