@@ -31,7 +31,7 @@ Needs Docker (MySQL 8.4 image) — or your own MySQL 8.0.31+ (set `DB_HOST=127.0
 ```bash
 make up                 # start MySQL
 make week N=5           # database exactly as it was at the end of week 5, then run that week's checks
-make all                # the finished project (weeks 1-10) + 98 automated assertions
+make all                # the finished project (weeks 1-10) + 102 automated assertions
 make shell              # a mysql prompt on the finished database
 make test               # pytest (27 tests)
 ```

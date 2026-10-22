@@ -3,6 +3,7 @@
 **Course:** CS/AI/AIM/DS 202 Database Management Systems (Semester III, A.Y. 2026-27)
 **Institution:** ICFAI Foundation for Higher Education (IcfaiTech), Hyderabad
 **Authors:** Sai Haresh Anand S (25STUCHH010419) and Dulam Seshivardhini (25STUCHH001048)
+**Source code:** https://github.com/SAI-HARISH2007/sentinel-sql-progress
 **Platform:** MySQL 8.4 (developed in Docker), plain SQL, no application code in the detection path
 
 ---
@@ -261,6 +262,16 @@ Measured with `EXPLAIN ANALYZE` on MySQL 8.4.11:
 | Merchant 50, newest 20 | cost 88.5 | reverse scan on `idx_txn_merchant_time` | no sort |
 
 So the drop from 1,349 to 174 comes from the single-column index on `txn_time` serving a range predicate. The composite index on `(account_id, txn_time)` does something different. An account has only about 52 rows on average, so the optimiser's cost barely moves, but the velocity and travel rules get an account's recent rows already in time order, with no sort. We report both numbers as measured and do not give the composite index credit for the bigger one.
+
+### 5.6 Backend, frontend and source code
+
+Sentinel has no separate application server. The backend is the MySQL database itself: the trigger, the stored procedures, the views and the `rule_config` table do all the detection, and a client only has to run `INSERT` and `SELECT`. Two roles define how a client may talk to it. `txn_app` may `INSERT` into `transactions` and call `transfer_funds()`. `api_reader` may only `SELECT` from four views and `rule_config`, so a reporting layer can read alerts but cannot change anything.
+
+There is no web application connected to the live database yet. A FastAPI service that reads through `api_reader` and a dashboard on top of it are planned (Section 8). What exists today is `demo.html`, a single page that runs in any browser and re-implements the six rules in JavaScript. It has three parts: a simulator where the viewer picks a persona or moves sliders for amount, time of day, device and location; an animated five-stage pipeline (INSERT, trigger, rule evaluation, score, alert row); and an architecture diagram of the tables, trigger and procedures. Appendix C shows the screenshots. It does not talk to MySQL, so the SQL scripts remain the authoritative behaviour.
+
+The 27 Python tests (`pytest`) connect to the running database and check the same behaviour from outside, through the database driver.
+
+Source code, all week-wise scripts, the demo page and this report are in the public repository: https://github.com/SAI-HARISH2007/sentinel-sql-progress
 
 ## 6. Experimental Benchmarks and Evaluation
 
