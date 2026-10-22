@@ -479,7 +479,7 @@ Each figure was produced by running the shown statement against the live `sentin
 
 ## Appendix C. Interactive Demonstration
 
-`demo.html` is a standalone page that re-implements the six rules in JavaScript so the pipeline can be explained without a database connection. It is an explanatory aid; the authoritative behaviour is the SQL above. Screenshots below were captured from the page.
+`demo.html` is a standalone page that re-implements the six rules in JavaScript so the pipeline can be explained without a database connection. It is an explanatory aid; the authoritative behaviour is the SQL above. Screenshots below were captured from the page and converted to black on white for printing. Figure C.1 shows the landing view. Figures C.2 to C.4 show the engine pipeline (the five stages from INSERT to alert row) for three of the personas.
 
 ![C.1 Landing view](figures/demo_home.png)
 
@@ -487,12 +487,12 @@ Each figure was produced by running the shown statement against the live `sentin
 
 ![C.2 Amount z-score persona](figures/demo_z.png)
 
-**Figure C.2 Amount z-score persona.**
+**Figure C.2 Pipeline for the amount z-score persona (an INR 95,000 purchase on an account averaging about INR 1,180).**
 
 ![C.3 Impossible-travel persona](figures/demo_travel.png)
 
-**Figure C.3 Impossible-travel persona.**
+**Figure C.3 Pipeline for the impossible-travel persona (Hyderabad to Tokyo in 15 minutes).**
 
 ![C.4 High-velocity persona](figures/demo_vel.png)
 
-**Figure C.4 High-velocity persona.**
+**Figure C.4 Pipeline for the high-velocity persona (a burst of payments inside the five-minute window).**
