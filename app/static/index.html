@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel</title>
+<style>
+:root{
+  --bg:#f4f5f2; --panel:#ffffff; --ink:#1c2321; --muted:#66706b; --line:#dfe3dd;
+  --side:#16201d; --side-ink:#c9d3ce; --accent:#0f766e; --accent-d:#0b5a54; --accent-l:#d9efec;
+  --warn:#b45309; --warn-l:#fdecc8; --bad:#b42318; --bad-l:#fde4e1; --ok:#1d7a3a; --ok-l:#dcf3e2;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh}
+aside{width:224px;background:var(--side);color:var(--side-ink);padding:20px 12px;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;color:#fff;font-weight:700;font-size:17px;letter-spacing:.2px}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;font-style:normal;font-size:14px}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6f7f78;padding:14px 10px 4px}
+nav a{display:block;padding:8px 10px;border-radius:7px;color:var(--side-ink);text-decoration:none;cursor:pointer}
+nav a:hover{background:#22302b}
+nav a.on{background:var(--accent);color:#fff}
+.foot{margin-top:auto;padding:12px 10px 0;font-size:12px;color:#6f7f78}
+main{margin-left:224px;flex:1;padding:26px 30px 60px;min-width:0}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 20px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+input,select,button{font:inherit}
+input[type=text],input[type=search],input[type=number],input[type=email],input[type=date],input[type=datetime-local],select{
+  padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent-l);border-color:var(--accent)}
+.btn{border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;color:var(--ink)}
+.btn:hover{background:#f0f2ee}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.p:hover{background:var(--accent-d)}
+.btn.d{color:var(--bad)}
+.btn.s{padding:4px 10px;font-size:13px}
+.spacer{flex:1}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.tablewrap{overflow:auto}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);background:#fafbf9;white-space:nowrap;position:sticky;top:0}
+td{padding:9px 12px;border-bottom:1px solid #eef0ec;vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#fafbf9}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.act{white-space:nowrap;text-align:right}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#eceee9;color:#46504b}
+.b-open,.b-pending,.b-frozen{background:var(--warn-l);color:var(--warn)}
+.b-confirmed,.b-failed,.b-closed{background:var(--bad-l);color:var(--bad)}
+.b-success,.b-active,.b-investigated{background:var(--ok-l);color:var(--ok)}
+.b-false_positive{background:#e4e7e2;color:#59635e}
+.chip{display:inline-block;margin:0 4px 4px 0;padding:2px 8px;border-radius:6px;background:var(--accent-l);color:var(--accent-d);font-size:12px}
+.score{font-weight:700}
+.s0{color:var(--muted)}.s1{color:#8a6a00}.s2{color:var(--warn)}.s3{color:var(--bad)}
+.pager{display:flex;align-items:center;gap:10px;padding:12px 4px;color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.grid{display:grid;gap:14px}
+.stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px}
+.stat{padding:16px 18px}
+.stat b{display:block;font-size:26px;letter-spacing:-.5px}
+.stat span{color:var(--muted);font-size:13px}
+.two{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.panel{padding:16px 18px}
+.panel h3{margin:0 0 12px;font-size:14px}
+.hb{display:grid;grid-template-columns:130px 1fr 36px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.hb div.t{background:#edf0ec;border-radius:5px;height:14px;overflow:hidden}
+.hb div.t i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.cols{display:flex;align-items:flex-end;gap:5px;height:130px;padding-top:6px}
+.cols div{flex:1;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.cols div:hover{background:var(--accent-d)}
+.cols div span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap;display:none}
+.cols div:hover span{display:block}
+.lbls{display:flex;gap:5px;font-size:10px;color:var(--muted);margin-top:4px}
+.lbls span{flex:1;text-align:center;overflow:hidden}
+.modal{position:fixed;inset:0;background:rgba(20,28,25,.45);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.on{display:flex}
+.box{background:#fff;border-radius:14px;width:min(520px,100%);max-height:92vh;overflow:auto;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.box h2{margin:0 0 14px;font-size:18px}
+.f{display:grid;gap:4px;margin-bottom:12px}
+.f label{font-size:12px;color:var(--muted);font-weight:600}
+.f input,.f select{width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mf{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.result{border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.result.hit{background:var(--warn-l)} .result.clean{background:var(--ok-l)}
+.result big{display:block;font-size:20px;font-weight:700;margin-bottom:6px}
+#toast{position:fixed;right:20px;bottom:20px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:9px;display:none;z-index:30;max-width:360px}
+#toast.err{background:var(--bad)}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+pre.j{margin:0;font:12px Consolas,monospace;white-space:pre-wrap;word-break:break-all;color:#46504b}
+@media(max-width:820px){aside{position:static;width:100%;flex-direction:row;flex-wrap:wrap}body{flex-direction:column}main{margin:0;padding:18px}.grp,.foot{display:none}}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><i>S</i>Sentinel</div>
+  <nav id="nav"></nav>
+  <div class="foot">MySQL 8 &middot; scoring runs inside the database</div>
+</aside>
+<main id="main"></main>
+<div class="modal" id="modal"><div class="box" id="box"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const inr = n => "₹" + Number(n).toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+async function api(path, method = "GET", body) {
+  const r = await fetch("/api/" + path, {
+    method, headers: body ? {"content-type": "application/json"} : {}, body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+let tt;
+function toast(msg, err) {
+  const t = $("#toast"); t.textContent = msg; t.className = err ? "err" : ""; t.style.display = "block";
+  clearTimeout(tt); tt = setTimeout(() => t.style.display = "none", 4200);
+}
+
+const STATUS = {
+  accounts: ["active", "frozen", "closed"],
+  transactions: ["success", "pending", "failed"],
+  alerts: ["open", "investigated", "confirmed", "false_positive"]
+};
+
+// What each page shows and what its form asks for.
+const UI = {
+  transactions: {
+    title: "Transactions", sub: "Adding a row here fires the scoring trigger in MySQL. The result appears straight away.",
+    cols: [["txn_id", "ID"], ["owner", "Account holder"], ["merchant_name", "Merchant"], ["city", "City"], ["device_type", "Device"],
+           ["amount", "Amount", "money"], ["txn_time", "Time"], ["status", "Status", "badge"], ["risk_score", "Score", "score"]],
+    fields: [
+      {k: "account_id", l: "Account", t: "lookup", src: "accounts", req: 1},
+      {k: "merchant_id", l: "Merchant", t: "lookup", src: "merchants", req: 1},
+      {k: "device_id", l: "Device", t: "lookup", src: "devices", req: 1},
+      {k: "location_id", l: "City", t: "lookup", src: "locations", req: 1},
+      {k: "amount", l: "Amount", t: "number", step: "0.01", min: "0.01", req: 1},
+      {k: "txn_time", l: "Time (blank = now)", t: "datetime-local"},
+      {k: "status", l: "Status", t: "enum", opts: STATUS.transactions}],
+    filters: "status", flagged: true, add: "New transaction", scoreResult: true
+  },
+  alerts: {
+    title: "Alerts", sub: "Review what the rules flagged. Changing the status writes a row to the audit log.",
+    cols: [["alert_id", "ID"], ["owner", "Account holder"], ["merchant_name", "Merchant"], ["amount", "Amount", "money"],
+           ["reasons", "Why it was flagged", "reasons"], ["risk_score", "Score", "score"], ["status", "Status", "alertstatus"]],
+    fields: [{k: "status", l: "Status", t: "enum", opts: STATUS.alerts}],
+    filters: "status", noAdd: true
+  },
+  users: {
+    title: "Users", sub: "People who hold accounts.",
+    cols: [["user_id", "ID"], ["full_name", "Name"], ["email", "Email"], ["phone", "Phone"], ["date_of_birth", "Date of birth"]],
+    fields: [{k: "full_name", l: "Full name", t: "text", req: 1}, {k: "email", l: "Email", t: "email", req: 1},
+             {k: "phone", l: "Phone", t: "text"}, {k: "date_of_birth", l: "Date of birth", t: "date"}],
+    add: "New user"
+  },
+  accounts: {
+    title: "Accounts", sub: "Deleting an account also deletes its transactions and alerts (ON DELETE CASCADE).",
+    cols: [["account_id", "ID"], ["owner", "Owner"], ["account_type", "Type"], ["balance", "Balance", "money"], ["status", "Status", "badge"]],
+    fields: [{k: "user_id", l: "Owner", t: "lookup", src: "users", req: 1},
+             {k: "account_type", l: "Type", t: "enum", opts: ["savings", "current"]},
+             {k: "balance", l: "Balance", t: "number", step: "0.01", min: "0"},
+             {k: "status", l: "Status", t: "enum", opts: STATUS.accounts}],
+    filters: "status", add: "New account"
+  },
+  merchants: {
+    title: "Merchants", sub: "A merchant that is used in any transaction cannot be deleted (ON DELETE RESTRICT).",
+    cols: [["merchant_id", "ID"], ["merchant_name", "Name"], ["category_name", "Category"], ["city", "City"], ["risk_score", "Risk"]],
+    fields: [{k: "merchant_name", l: "Name", t: "text", req: 1}, {k: "category_id", l: "Category", t: "lookup", src: "categories", req: 1},
+             {k: "city", l: "City", t: "text", req: 1},
+             {k: "latitude", l: "Latitude", t: "number", step: "0.000001", req: 1}, {k: "longitude", l: "Longitude", t: "number", step: "0.000001", req: 1},
+             {k: "risk_score", l: "Risk score", t: "number", step: "0.01", min: "0"}],
+    add: "New merchant"
+  },
+  devices: {
+    title: "Devices", sub: "Each fingerprint is unique. A device never seen on an account triggers the new-device rule.",
+    cols: [["device_id", "ID"], ["device_type", "Type"], ["os", "OS"], ["browser", "Browser"], ["fingerprint_hash", "Fingerprint"]],
+    fields: [{k: "device_type", l: "Type", t: "enum", opts: ["mobile", "desktop", "tablet"]}, {k: "os", l: "OS", t: "text"},
+             {k: "browser", l: "Browser", t: "text"}, {k: "fingerprint_hash", l: "Fingerprint (unique)", t: "text", req: 1}],
+    add: "New device"
+  },
+  locations: {
+    title: "Locations", sub: "Coordinates feed the impossible-travel rule (haversine distance).",
+    cols: [["location_id", "ID"], ["city", "City"], ["state", "State"], ["country", "Country"], ["latitude", "Lat"], ["longitude", "Lon"]],
+    fields: [{k: "city", l: "City", t: "text", req: 1}, {k: "state", l: "State", t: "text"}, {k: "country", l: "Country", t: "text"},
+             {k: "latitude", l: "Latitude", t: "number", step: "0.000001", req: 1}, {k: "longitude", l: "Longitude", t: "number", step: "0.000001", req: 1}],
+    add: "New location"
+  },
+  rules: {
+    title: "Rules", sub: "Thresholds the scoring procedure reads. Change one, then add a transaction to see the effect.",
+    cols: [["rule_name", "Rule"], ["description", "What it means"], ["threshold_value", "Threshold"], ["enabled", "On", "bool"], ["updated_at", "Updated"]],
+    fields: [{k: "threshold_value", l: "Threshold", t: "number", step: "0.0001", req: 1}, {k: "enabled", l: "Enabled", t: "enum", opts: ["1", "0"], labels: ["on", "off"]}],
+    noAdd: true, noDel: true
+  }
+};
+
+const PAGES = [
+  ["dashboard", "Dashboard"], ["g", "Fraud"], ["transactions", "Transactions"], ["alerts", "Alerts"], ["rules", "Rules"],
+  ["g", "Records"], ["users", "Users"], ["accounts", "Accounts"], ["merchants", "Merchants"], ["devices", "Devices"], ["locations", "Locations"],
+  ["g", "System"], ["audit", "Audit log"]
+];
+$("#nav").innerHTML = PAGES.map(([k, l]) => k === "g" ? `<div class="grp">${l}</div>` : `<a data-p="${k}">${l}</a>`).join("");
+$("#nav").onclick = e => { const a = e.target.closest("a"); if (a) location.hash = a.dataset.p; };
+
+const lookupCache = {};
+async function lookup(name, fresh) {
+  if (fresh || !lookupCache[name]) lookupCache[name] = await api("lookup/" + name);
+  return lookupCache[name];
+}
+
+// ---------- cells
+function cell(c, row) {
+  const [k, , kind] = c, v = row[k];
+  if (kind === "money") return `<td class="num">${inr(v)}</td>`;
+  if (kind === "badge") return `<td><span class="badge b-${esc(v)}">${esc(v)}</span></td>`;
+  if (kind === "bool") return `<td>${v ? "yes" : "no"}</td>`;
+  if (kind === "score") return v == null ? `<td class="s0">-</td>` : `<td class="score s${Math.min(3, Math.round(v))}">${Number(v).toFixed(0)}</td>`;
+  if (kind === "reasons") return `<td>${(v || []).map(r => `<span class="chip">${esc(r)}</span>`).join("")}</td>`;
+  if (kind === "alertstatus") {
+    return `<td><select data-alert="${row.alert_id}">${STATUS.alerts.map(s => `<option ${s === v ? "selected" : ""}>${s}</option>`).join("")}</select></td>`;
+  }
+  return `<td>${v == null ? "" : esc(v)}</td>`;
+}
+
+// ---------- list pages
+let state = {};
+async function listPage(name) {
+  const u = UI[name];
+  state = {name, q: "", page: 1, status: "", flagged: false, ...(state.name === name ? state : {})};
+  $("#main").innerHTML = `
+    <h1>${u.title}</h1><p class="sub">${u.sub}</p>
+    <div class="bar">
+      <input type="search" id="q" placeholder="Search" value="${esc(state.q)}" style="width:240px">
+      ${u.filters ? `<select id="st"><option value="">All statuses</option>${STATUS[name].map(s => `<option ${s === state.status ? "selected" : ""}>${s}</option>`).join("")}</select>` : ""}
+      ${u.flagged ? `<label><input type="checkbox" id="fl" ${state.flagged ? "checked" : ""}> flagged only</label>` : ""}
+      <span class="spacer"></span>
+      ${u.noAdd ? "" : `<button class="btn p" id="add">+ ${u.add}</button>`}
+    </div>
+    <div class="card"><div class="tablewrap" id="tbl"></div></div>
+    <div class="pager" id="pg"></div>`;
+  let t;
+  $("#q").oninput = e => { clearTimeout(t); t = setTimeout(() => { state.q = e.target.value; state.page = 1; load(); }, 250); };
+  if ($("#st")) $("#st").onchange = e => { state.status = e.target.value; state.page = 1; load(); };
+  if ($("#fl")) $("#fl").onchange = e => { state.flagged = e.target.checked; state.page = 1; load(); };
+  if ($("#add")) $("#add").onclick = () => form(name);
+  load();
+}
+
+async function load() {
+  const {name} = state, u = UI[name];
+  const qs = new URLSearchParams({q: state.q, page: state.page});
+  if (state.status) qs.set("status", state.status);
+  if (state.flagged) qs.set("flagged", "1");
+  let d;
+  try { d = await api(name + "?" + qs); } catch (e) { return toast(e.message, 1); }
+  window._rows = d.rows;
+  const canEdit = true, canDel = !u.noDel;
+  $("#tbl").innerHTML = d.rows.length ? `<table><thead><tr>${u.cols.map(c => `<th>${c[1]}</th>`).join("")}<th></th></tr></thead><tbody>${
+    d.rows.map((r, i) => `<tr>${u.cols.map(c => cell(c, r)).join("")}<td class="act">${
+      u.fields.length && name !== "alerts" ? `<button class="btn s" data-e="${i}">Edit</button> ` : ""}${canDel ? `<button class="btn s d" data-d="${i}">Delete</button>` : ""}</td></tr>`).join("")
+  }</tbody></table>` : `<div class="empty">Nothing here yet.</div>`;
+  const pages = Math.max(1, Math.ceil(d.total / d.size));
+  $("#pg").innerHTML = `<button class="btn s" id="pv" ${d.page <= 1 ? "disabled" : ""}>Prev</button>
+    <span>Page ${d.page} of ${pages} &middot; ${d.total.toLocaleString()} rows</span>
+    <button class="btn s" id="nx" ${d.page >= pages ? "disabled" : ""}>Next</button>`;
+  $("#pv").onclick = () => { state.page--; load(); };
+  $("#nx").onclick = () => { state.page++; load(); };
+  $("#tbl").onclick = async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.e != null) form(name, window._rows[b.dataset.e]);
+    if (b.dataset.d != null) remove(name, window._rows[b.dataset.d]);
+  };
+  $("#tbl").onchange = async e => {
+    const s = e.target.closest("select[data-alert]"); if (!s) return;
+    try { await api("alerts/" + s.dataset.alert, "PUT", {status: s.value}); toast("Alert " + s.dataset.alert + " set to " + s.value); }
+    catch (er) { toast(er.message, 1); }
+  };
+}
+
+async function remove(name, row) {
+  const pk = Object.keys(row)[0], id = row[pk];
+  if (!confirm(`Delete ${name.replace(/s$/, "")} #${id}?`)) return;
+  try { await api(`${name}/${id}`, "DELETE"); toast("Deleted #" + id); load(); }
+  catch (e) { toast(e.message, 1); }
+}
+
+// ---------- add / edit form
+async function form(name, row) {
+  const u = UI[name], editing = !!row, pk = row && Object.keys(row)[0];
+  const parts = [];
+  for (const f of u.fields) {
+    let val = editing ? row[f.k] : "";
+    let input;
+    if (f.t === "lookup") {
+      const opts = await lookup(f.src);
+      input = `<select name="${f.k}" ${f.req ? "required" : ""}><option value="">Select...</option>${opts.map(o => `<option value="${o.id}" ${String(o.id) === String(val) ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select>`;
+    } else if (f.t === "enum") {
+      input = `<select name="${f.k}">${f.opts.map((o, i) => `<option value="${o}" ${String(o) === String(val ?? (editing ? "" : f.opts[0])) ? "selected" : ""}>${f.labels ? f.labels[i] : o}</option>`).join("")}</select>`;
+    } else {
+      if (f.t === "datetime-local" && val) val = String(val).replace(" ", "T").slice(0, 16);
+      input = `<input type="${f.t}" name="${f.k}" value="${esc(val)}" ${f.step ? `step="${f.step}"` : ""} ${f.min ? `min="${f.min}"` : ""} ${f.req ? "required" : ""}>`;
+    }
+    parts.push(`<div class="f"><label>${f.l}</label>${input}</div>`);
+  }
+  const grid = u.fields.length > 4 ? parts.map(p => p).join("") : parts.join("");
+  $("#box").innerHTML = `<h2>${editing ? "Edit" : u.add || "New"} ${editing ? "#" + row[pk] : ""}</h2>
+    <form id="fm">${grid}<div class="mf"><button type="button" class="btn" id="cx">Cancel</button><button class="btn p">${editing ? "Save" : "Add"}</button></div></form>
+    ${name === "transactions" && !editing ? `<p class="note">Tip: pick a device the account has not used, a far-away city, or a large amount to see rules fire.</p>` : ""}`;
+  $("#modal").classList.add("on");
+  $("#cx").onclick = closeModal;
+  $("#fm").onsubmit = async e => {
+    e.preventDefault();
+    const body = {};
+    new FormData(e.target).forEach((v, k) => body[k] = v);
+    if (body.txn_time) body.txn_time = body.txn_time.replace("T", " ") + ":00";
+    try {
+      const res = await api(editing ? `${name}/${row[pk]}` : name, editing ? "PUT" : "POST", body);
+      if (name !== "rules") for (const k of Object.keys(lookupCache)) delete lookupCache[k];
+      if (u.scoreResult) return showScore(res.alert, body);
+      closeModal(); toast(editing ? "Saved" : "Added"); load();
+    } catch (er) { toast(er.message, 1); }
+  };
+}
+function showScore(a) {
+  $("#box").innerHTML = `<h2>Scored by the database</h2>
+    <div class="result ${a ? "hit" : "clean"}">
+      <big>${a ? "Flagged, score " + Number(a.risk_score).toFixed(0) + " of 6" : "Clean, no rule fired"}</big>
+      ${a ? (a.reasons || []).map(r => `<span class="chip">${esc(r)}</span>`).join("") : "The trigger ran and found nothing unusual, so no alert row was written."}
+    </div>
+    <p class="note">trg_after_txn_insert called score_transaction(), which checked the six rules inside MySQL.</p>
+    <div class="mf">${a ? `<button class="btn" id="goal">Open alerts</button>` : ""}<button class="btn p" id="ok">Done</button></div>`;
+  $("#ok").onclick = () => { closeModal(); load(); };
+  if ($("#goal")) $("#goal").onclick = () => { closeModal(); location.hash = "alerts"; };
+}
+function closeModal() { $("#modal").classList.remove("on"); }
+$("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+
+// ---------- dashboard
+function hbars(rows, labelFn) {
+  const max = Math.max(1, ...rows.map(r => r.n));
+  return rows.length ? rows.map(r => `<div class="hb"><span>${esc(labelFn ? labelFn(r.label) : r.label)}</span><div class="t"><i style="width:${r.n / max * 100}%"></i></div><b>${r.n}</b></div>`).join("") : `<div class="empty">No data</div>`;
+}
+async function dashboard() {
+  $("#main").innerHTML = `<h1>Dashboard</h1><p class="sub">Live numbers read from the database views.</p><div class="empty">Loading</div>`;
+  let d;
+  try { d = await api("dashboard"); } catch (e) { return toast(e.message, 1); }
+  const c = d.counts, max = Math.max(1, ...d.daily.map(x => x.n));
+  $("#main").innerHTML = `<h1>Dashboard</h1><p class="sub">Live numbers read from the database views.</p>
+    <div class="grid stats">
+      <div class="card stat"><b>${c.transactions.toLocaleString()}</b><span>Transactions</span></div>
+      <div class="card stat"><b>${c.alerts}</b><span>Alerts raised</span></div>
+      <div class="card stat"><b style="color:var(--warn)">${c.open_alerts}</b><span>Waiting for review</span></div>
+      <div class="card stat"><b>${c.accounts}</b><span>Accounts</span></div>
+      <div class="card stat"><b>${c.users}</b><span>Users</span></div>
+    </div>
+    <div class="grid two">
+      <div class="card panel"><h3>Alerts by rule</h3>${hbars(d.by_reason)}</div>
+      <div class="card panel"><h3>Alerts by risk score</h3>${hbars(d.by_score, l => "Score " + l)}</div>
+      <div class="card panel"><h3>Alert status</h3>${hbars(d.by_status)}</div>
+      <div class="card panel"><h3>Most flagged users</h3>
+        ${d.risky.length ? `<table><tbody>${d.risky.map(r => `<tr><td>${esc(r.full_name)}</td><td class="num">${r.total_alerts} ${r.total_alerts == 1 ? "alert" : "alerts"}</td><td class="num">max ${Number(r.max_risk_score).toFixed(0)}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">No data</div>`}</div>
+      <div class="card panel" style="grid-column:1/-1"><h3>Transactions per day (last ${d.daily.length} days)</h3>
+        <div class="cols">${d.daily.map(x => `<div style="height:${x.n / max * 100}%"><span>${x.label}: ${x.n}</span></div>`).join("")}</div>
+        <div class="lbls">${d.daily.map(x => `<span>${String(x.label).slice(5)}</span>`).join("")}</div></div>
+    </div>`;
+}
+
+// ---------- audit log
+async function audit() {
+  $("#main").innerHTML = `<h1>Audit log</h1><p class="sub">Written by triggers, not by this app. Change an alert status and it shows up here.</p><div class="card"><div class="tablewrap" id="tbl"></div></div>`;
+  try {
+    const d = await api("audit");
+    $("#tbl").innerHTML = d.rows.length ? `<table><thead><tr><th>ID</th><th>Table</th><th>Row</th><th>Action</th><th>Before</th><th>After</th><th>By</th><th>When</th></tr></thead><tbody>${
+      d.rows.map(r => `<tr><td>${r.audit_id}</td><td>${esc(r.table_name)}</td><td>${r.record_id}</td><td><span class="badge">${esc(r.action)}</span></td><td><pre class="j">${esc(r.old_value_json)}</pre></td><td><pre class="j">${esc(r.new_value_json)}</pre></td><td>${esc(r.changed_by)}</td><td>${esc(r.changed_at)}</td></tr>`).join("")
+    }</tbody></table>` : `<div class="empty">No entries yet. Change an alert's status and come back.</div>`;
+  } catch (e) { toast(e.message, 1); }
+}
+
+// ---------- router
+function route() {
+  const p = (location.hash || "#dashboard").slice(1);
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.p === p));
+  if (p === "dashboard") dashboard(); else if (p === "audit") audit(); else if (UI[p]) listPage(p); else dashboard();
+}
+addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
