@@ -18,7 +18,6 @@ week-NN-*/check.sql   assertions; every row must say PASS
 week-NN-*/README.md   the explanation + viva concepts
 scripts/              build.sh N · check.sh N · compare_to_reference.sh · gen_er_docs.py · build_report.py · fingerprint.sql
 reference/            frozen schema fingerprint of the finished database
-report/               generated report pages (do not hand-edit; run scripts/build_report.py)
 ```
 
 ## Commands you will need
@@ -28,8 +27,6 @@ make week N=6                  # state as of week 6
 make test                      # pytest, 27 tests
 scripts/compare_to_reference.sh        # schema unchanged?   (--update after a DELIBERATE schema change)
 python3 scripts/gen_er_docs.py         # regenerate ER docs after a schema change
-python3 scripts/build_report.py        # regenerate report/*.md (needs the finished DB running)
-python3 scripts/build_pdf.py           # md -> PDF (pip install markdown weasyprint)
 ```
 Env overrides: `CONTAINER`, `DB_ROOT_PASS`, `DB_HOST`/`DB_PORT` (host mode). Dev passwords are in `docker-compose.yml`; they protect nothing real.
 

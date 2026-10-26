@@ -4,25 +4,25 @@ A banking-style MySQL database where **fraud detection lives inside the database
 
 **Course:** CS/AI/AIM/DS 202 Database Management Systems, Semester III, A.Y. 2026-27, ICFAI Faculty of Science & Technology
 **Team:** [Sai Haresh Anand S](https://github.com/SAI-HARISH2007) · Seshivardhini
-**Report (PDF):** [`report/PROJECT_REPORT.pdf`](report/PROJECT_REPORT.pdf) — one section per week, with real query output. Per-week PDFs are in [`report/pdf/`](report/pdf/); Markdown versions sit next to them.
+**Web app:** `app/` (Flask backend `app/app.py`, frontend `app/static/index.html`). Run it with `bash app/run.sh`; see `LAB_SETUP.md`.
 
 ## How this repository is organised
 
 The project is built **one lab at a time**. Each `week-NN-*` folder is one lab experiment and adds one layer; folders only depend on earlier ones.
 
-| Week | Lab experiment | Adds | Report page |
-|---|---|---|---|
-| [1](week-01-intro-er-design/) | Intro to MySQL, ER design | Problem statement, ER diagram, ER→tables rules, `CREATE DATABASE` | [p.1](report/pages/week-01.md) |
-| [2](week-02-ddl/) | DDL | 13 tables (columns only); ALTER / RENAME / DROP COLUMN | [p.2](report/pages/week-02.md) |
-| [3](week-03-constraints/) | Constraints | PK, FK, UNIQUE, NOT NULL, DEFAULT, CHECK; 3NF argument | [p.3](report/pages/week-03.md) |
-| [4](week-04-dml/) | DML | Rule thresholds + 12,067 transactions + 5 fraud personas | [p.4](report/pages/week-04.md) |
-| [5](week-05-functions/) | Functions | Rule 1 (z-score), Rule 2 preview, Rule 5 by hand | [p.5](report/pages/week-05.md) |
-| [6](week-06-operators/) | Operators | All operator families, first-cut fraud screen | [p.6](report/pages/week-06.md) |
-| [7](week-07-joins/) | Joins | Rule 3 (new device), Rule 4 pairs, Rule 5 for all accounts | [p.7](report/pages/week-07.md) |
-| [8](week-08-groupby-subqueries/) | GROUP BY / HAVING / ORDER BY, subqueries | Rules 1, 2, 4 for all accounts; baselines | [p.8](report/pages/week-08.md) |
-| [9](week-09-views-indexes-dcl/) | Views, indexes (+ DCL) | Six rule views, combined risk view, measured indexes, roles | [p.9](report/pages/week-09.md) |
-| [10](week-10-procedures-triggers/) | Procedures and triggers | `score_transaction`, triggers, event, `transfer_funds` | [p.10](report/pages/week-10.md) |
-| [11](week-11-final-polish/) | Final | 27 pytest tests, report/slides/demo/viva material, limitations | [p.11](report/pages/week-11.md) |
+| Week | Lab experiment | Adds |
+|---|---|---|
+| [1](week-01-intro-er-design/) | Intro to MySQL, ER design | Problem statement, ER diagram, ER→tables rules, `CREATE DATABASE` |
+| [2](week-02-ddl/) | DDL | 13 tables (columns only); ALTER / RENAME / DROP COLUMN |
+| [3](week-03-constraints/) | Constraints | PK, FK, UNIQUE, NOT NULL, DEFAULT, CHECK; 3NF argument |
+| [4](week-04-dml/) | DML | Rule thresholds + 12,067 transactions + 5 fraud personas |
+| [5](week-05-functions/) | Functions | Rule 1 (z-score), Rule 2 preview, Rule 5 by hand |
+| [6](week-06-operators/) | Operators | All operator families, first-cut fraud screen |
+| [7](week-07-joins/) | Joins | Rule 3 (new device), Rule 4 pairs, Rule 5 for all accounts |
+| [8](week-08-groupby-subqueries/) | GROUP BY / HAVING / ORDER BY, subqueries | Rules 1, 2, 4 for all accounts; baselines |
+| [9](week-09-views-indexes-dcl/) | Views, indexes (+ DCL) | Six rule views, combined risk view, measured indexes, roles |
+| [10](week-10-procedures-triggers/) | Procedures and triggers | `score_transaction`, triggers, event, `transfer_funds` |
+| [11](week-11-final-polish/) | Final | 27 pytest tests, report/slides/demo/viva material, limitations |
 
 ## Run it
 

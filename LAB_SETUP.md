@@ -19,7 +19,7 @@ Then run the demo: `week-10-procedures-triggers/demo/01_fraud_demo.sql`.
 
 ## Option B: no usable MySQL on the lab machine
 
-Open `report/sentinel_project_report.pdf` for the code and captured output, and open `demo.html` in a browser (it needs internet for the Tailwind CDN). Run the live database from your own laptop with Docker: `make up && make all`.
+Run the live database from a laptop with Docker: `make up && make all`.
 
 Host mode (`DB_HOST`) has not been tested on a lab machine, so try it at home first against a local MySQL install.
 
