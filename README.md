@@ -27,18 +27,9 @@ A banking-style MySQL database where **fraud detection lives inside the database
 
 Five stages, all inside one `INSERT`. Nothing leaves the database server. The [interactive demo](https://haresh.acadnet.net/dbms/project/demo.html) lets you step through them with your own transaction.
 
-```mermaid
-flowchart TD
-    A["<b>1. Ingestion</b><br/>A client writes one row to transactions"]
-    B["<b>2. Trigger activation</b><br/>trg_after_txn_insert fires AFTER INSERT, FOR EACH ROW"]
-    C["<b>3. Rule evaluation</b><br/>score_transaction() checks six rules against rule_config"]
-    D{"<b>4. Score and decision</b><br/>Each rule hit adds 1.<br/>Score above 0?"}
-    E["<b>5. Alert log</b><br/>Row written to alerts, with reasons as a JSON array;<br/>analysts see it in v_active_alerts"]
-    F["No alert"]
-    A --> B --> C --> D
-    D -- Yes --> E
-    D -- No --> F
-```
+<p align="center">
+  <img src="docs/workflow.svg" alt="Workflow: a client inserts a row, trg_after_txn_insert fires, score_transaction() checks six rules against rule_config, each rule that fires adds 1 to the score, and a score above 0 writes an alert shown in v_active_alerts." width="780">
+</p>
 
 * **Atomic.** The trigger runs inside the `INSERT`'s own transaction: no scored transaction without its alert, and a scoring error rolls back the insert.
 * **Tunable.** Thresholds are rows in `rule_config`, read on every call, so changing one is an `UPDATE` and not a redeploy.

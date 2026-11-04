@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 500" width="780" height="500" role="img" aria-labelledby="t d">
+  <title id="t">Sentinel fraud detection workflow</title>
+  <desc id="d">Five stages inside one INSERT: ingestion, trigger activation, rule evaluation, score and decision, alert log. A score of 0 raises no alert.</desc>
+  <style>
+    .card { fill: #ffffff; stroke: #d0d7de; stroke-width: 1.5; }
+    .engine { fill: #f3f0ff; stroke: #7c5cd6; }
+    .frame { fill: none; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 5; }
+    .title { font: 600 16px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .body { font: 13.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
+    .label { font: 600 12.5px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #59636e; }
+    .num { font: 700 14px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #ffffff; text-anchor: middle; }
+    .dot { fill: #57606a; }
+    .dot-engine { fill: #7c5cd6; }
+    .arrow { stroke: #8c959f; stroke-width: 2; fill: none; marker-end: url(#head); }
+    .head { fill: #8c959f; }
+    @media (prefers-color-scheme: dark) {
+      .card { fill: #161b22; stroke: #3d444d; }
+      .engine { fill: #221c3a; stroke: #a48bf0; }
+      .frame { stroke: #6e7681; }
+      .title { fill: #f0f6fc; }
+      .body, .label { fill: #9198a1; }
+      .dot { fill: #6e7681; }
+      .dot-engine { fill: #8a6ee0; }
+      .arrow { stroke: #6e7681; }
+      .head { fill: #6e7681; }
+    }
+  </style>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="head" d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="frame" x="10" y="26" width="760" height="464" rx="12"/>
+  <text class="label" x="26" y="18">One INSERT, all inside the database server</text>
+
+  <path class="arrow" d="M280 112 V130"/>
+  <path class="arrow" d="M280 202 V220"/>
+  <path class="arrow" d="M280 292 V310"/>
+  <path class="arrow" d="M280 382 V400"/>
+  <text class="label" x="292" y="396">score above 0</text>
+  <path class="arrow" d="M530 346 H618"/>
+  <text class="label" x="544" y="336">score is 0</text>
+
+  <rect class="card" x="30" y="44" width="500" height="68" rx="10"/>
+  <circle class="dot" cx="64" cy="78" r="15"/><text class="num" x="64" y="83">1</text>
+  <text class="title" x="94" y="72">Ingestion</text>
+  <text class="body" x="94" y="94">A client writes one row to transactions</text>
+
+  <rect class="card engine" x="30" y="134" width="500" height="68" rx="10"/>
+  <circle class="dot-engine" cx="64" cy="168" r="15"/><text class="num" x="64" y="173">2</text>
+  <text class="title" x="94" y="162">Trigger activation</text>
+  <text class="body" x="94" y="184">trg_after_txn_insert fires AFTER INSERT, FOR EACH ROW</text>
+
+  <rect class="card engine" x="30" y="224" width="500" height="68" rx="10"/>
+  <circle class="dot-engine" cx="64" cy="258" r="15"/><text class="num" x="64" y="263">3</text>
+  <text class="title" x="94" y="252">Rule evaluation</text>
+  <text class="body" x="94" y="274">score_transaction() checks six rules against rule_config</text>
+
+  <rect class="card engine" x="30" y="314" width="500" height="68" rx="10"/>
+  <circle class="dot-engine" cx="64" cy="348" r="15"/><text class="num" x="64" y="353">4</text>
+  <text class="title" x="94" y="342">Score and decision</text>
+  <text class="body" x="94" y="364">Each rule that fires adds 1 to the risk score</text>
+
+  <rect class="card" x="622" y="322" width="130" height="52" rx="10"/>
+  <text class="title" x="687" y="353" text-anchor="middle">No alert</text>
+
+  <rect class="card" x="30" y="404" width="500" height="68" rx="10"/>
+  <circle class="dot" cx="64" cy="438" r="15"/><text class="num" x="64" y="443">5</text>
+  <text class="title" x="94" y="432">Alert log</text>
+  <text class="body" x="94" y="454">Alert stored with JSON reasons, shown in v_active_alerts</text>
+</svg>
